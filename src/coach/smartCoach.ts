@@ -37,9 +37,12 @@ const coachModel = getGenerativeModel(ai, {
 
 /** Each chat starts with the user's latest budgets and habits so advice can use their real situation. */
 export function startCoachChat(history: Content[] = []) {
+  const text = [SYSTEM_INSTRUCTION, budgetContextForCoach(), habitsForCoach()].filter(Boolean).join('\n\n');
   return coachModel.startChat({
     history,
-    systemInstruction: [SYSTEM_INSTRUCTION, budgetContextForCoach(), habitsForCoach()].filter(Boolean).join('\n\n'),
+    // Chat-level instructions are sent exactly as given (only model-level strings get wrapped),
+    // and the API rejects a bare string, so it must already be a Content object.
+    systemInstruction: { role: 'system', parts: [{ type: 'text', text }] },
   });
 }
 
@@ -90,13 +93,17 @@ export function getCoachErrorMessage(error: unknown) {
       return "I can't connect right now. Smart Coach isn't fully set up yet.";
     }
     if (code === 'fetch-error') {
-      // Request timeouts abort the fetch, which the SDK also reports as a fetch error.
-      return isTimeout(error)
-        ? "I'm taking too long to answer. Please try again."
-        : "I couldn't reach the server. Check your internet connection and try again.";
+      // The SDK reports both timeouts and error responses from the server as fetch errors.
+      if (isTimeout(error)) return "I'm taking too long to answer. Please try again.";
+      if (status !== undefined && status >= 500) return "I'm very busy right now. Please try again in a moment.";
+      if (status === 400 || status === 404) return "I couldn't process that. Please try again or start a new chat.";
+      return "I couldn't reach the server. Check your internet connection and try again.";
     }
     if (code === 'response-error') {
       return "I can't help with that one. Try asking about budgeting, saving, debt or investing basics.";
+    }
+    if (code === 'error') {
+      return "I couldn't reach the server. Check your internet connection and try again.";
     }
   }
 
