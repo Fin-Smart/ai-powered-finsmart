@@ -13,7 +13,7 @@ import { QuickReplies } from '../components/coach/QuickReplies';
 import { QuizCard } from '../components/coach/QuizCard';
 import { ComposeIcon, HistoryIcon } from '../components/icons';
 import { useKeyboardVisible } from '../hooks/useKeyboardVisible';
-import { takeIntent, usePendingIntent } from '../navigation/quickNav';
+import { takeIntent, useActiveTab, usePendingIntent } from '../navigation/quickNav';
 import { useTheme } from '../theme/ThemeProvider';
 
 let autoSessionStarted = false;
@@ -42,13 +42,14 @@ export function AIScreen() {
   const [composerHeight, setComposerHeight] = useState(0);
   const [historyVisible, setHistoryVisible] = useState(false);
 
-  // The tab is mounted in the background shortly after launch, so this session is usually ready
-  // before it's opened. It fails quietly; "Today's lesson" starts one again with full error messages.
+  // The tab is mounted in the background for speed, but the session only starts once it's opened,
+  // since it spends the person's tokens. It fails quietly; "Today's lesson" retries with full messages.
+  const activeTab = useActiveTab();
   useEffect(() => {
-    if (autoSessionStarted) return;
+    if (autoSessionStarted || activeTab !== 'ai') return;
     autoSessionStarted = true;
     void startSession({ silent: true });
-  }, [startSession]);
+  }, [activeTab, startSession]);
 
   const quickIntent = usePendingIntent();
   useEffect(() => {

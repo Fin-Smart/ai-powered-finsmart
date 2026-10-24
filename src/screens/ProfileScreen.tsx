@@ -23,13 +23,16 @@ import {
   MailVerifyIcon,
   PlusIcon,
   ProfileIcon,
+  SparkleIcon,
 } from '../components/icons';
 import { Screen } from '../components/Screen';
 import { SettingsGroup, SettingsRow } from '../components/settings/SettingsList';
 import { errorMessage, toast } from '../components/toast/toastStore';
 import { useAuthUser } from '../hooks/useAuthUser';
 import { deleteAccount, resendVerificationEmail, sendPasswordChangeLink, SignInAgainError, signInMethods } from '../lib/account';
+import { useTokens } from '../lib/aiUsage';
 import { signOutEverywhere } from '../lib/googleAuth';
+import { TokenStoreSheet } from '../components/tokens/TokenStoreSheet';
 import { takeIntent, usePendingIntent } from '../navigation/quickNav';
 import { useTheme, type ThemePreference } from '../theme/ThemeProvider';
 
@@ -51,6 +54,8 @@ export function ProfileScreen() {
   const currency = usePreferredCurrency();
   const [sheet, setSheet] = useState<BudgetSheetTarget | null>(null);
   const [incomeOpen, setIncomeOpen] = useState(false);
+  const [tokenStoreOpen, setTokenStoreOpen] = useState(false);
+  const tokens = useTokens();
 
   const quickIntent = usePendingIntent();
   useEffect(() => {
@@ -58,6 +63,7 @@ export function ProfileScreen() {
     if (!open) return;
     if (open.type === 'budget') setSheet({ mode: 'view', budgetId: open.budgetId, screen: open.screen });
     else if (open.type === 'newBudget') setSheet({ mode: 'create' });
+    else if (open.type === 'tokens') setTokenStoreOpen(true);
     else setIncomeOpen(true);
   }, [quickIntent]);
   const [busy, setBusy] = useState<BusyAction>(null);
@@ -274,6 +280,12 @@ export function ProfileScreen() {
         </SettingsGroup>
 
         <SettingsGroup title="Smart Coach" footer="Chats are saved on this phone only.">
+          <SettingsRow
+            Icon={SparkleIcon}
+            label="Tokens"
+            value={tokens.isLoading ? undefined : `${new Intl.NumberFormat().format(tokens.available)} available`}
+            onPress={() => setTokenStoreOpen(true)}
+          />
           <SettingsRow Icon={HistoryIcon} label="Clear chat history" onPress={clearHistory} />
         </SettingsGroup>
 
@@ -289,6 +301,7 @@ export function ProfileScreen() {
 
       <BudgetSheet target={sheet} onClose={() => setSheet(null)} />
       <IncomeSheet visible={incomeOpen} onClose={() => setIncomeOpen(false)} />
+      <TokenStoreSheet visible={tokenStoreOpen} onClose={() => setTokenStoreOpen(false)} />
     </Screen>
   );
 }

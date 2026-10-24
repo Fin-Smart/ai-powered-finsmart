@@ -2,7 +2,7 @@ import { AIError, getGenerativeModel, Schema, ThinkingLevel } from '@react-nativ
 
 import { FAST_MODEL, getCoachErrorMessage, isTimeout } from '../coach/smartCoach';
 import { ai } from '../lib/ai';
-import { recordAiUsage } from '../lib/aiUsage';
+import { assertTokensAvailable, recordAiUsage } from '../lib/aiUsage';
 import { formatMoney } from './money';
 import type { BudgetKind } from './types';
 
@@ -67,6 +67,7 @@ export async function planBudget(request: PlanRequest): Promise<BudgetPlan> {
   const generate = () => plannerModel.generateContent(prompt, { timeout: PLAN_TIMEOUT_MS });
 
   try {
+    assertTokensAvailable();
     let result: Awaited<ReturnType<typeof generate>>;
     try {
       result = await generate();

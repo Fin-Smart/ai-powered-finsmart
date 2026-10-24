@@ -9,7 +9,11 @@ export type QuickIntent =
   | { tab: 'ai'; start?: 'quiz' | 'lesson' }
   | {
       tab: 'profile';
-      open?: { type: 'budget'; budgetId: string; screen?: 'expense' } | { type: 'newBudget' } | { type: 'income' };
+      open?:
+        | { type: 'budget'; budgetId: string; screen?: 'expense' }
+        | { type: 'newBudget' }
+        | { type: 'income' }
+        | { type: 'tokens' };
     };
 
 let pending: QuickIntent | null = null;
@@ -31,6 +35,19 @@ export function navigate(intent: QuickIntent) {
 
 export function usePendingIntent() {
   return useSyncExternalStore(subscribe, () => pending);
+}
+
+let activeTab: TabKey = 'home';
+
+/** Called by the tab bar so screens that stay mounted in the background know when they're visible. */
+export function setActiveTab(tab: TabKey) {
+  if (activeTab === tab) return;
+  activeTab = tab;
+  notify();
+}
+
+export function useActiveTab() {
+  return useSyncExternalStore(subscribe, () => activeTab);
 }
 
 /** Returns and clears the pending intent if it's for `tab`. */

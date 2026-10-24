@@ -1,76 +1,70 @@
-import { Text, useWindowDimensions, View } from 'react-native';
+import { Pressable, Text, useWindowDimensions, View } from 'react-native';
 
-import { PLAN_LABELS, useAiUsage } from '../../lib/aiUsage';
+import { FREE_DAILY_TOKENS, useTokens } from '../../lib/aiUsage';
 import { useTheme } from '../../theme/ThemeProvider';
 import { SparkleIcon } from '../icons';
 import { ControlSlider } from './ControlSlider';
 import { SectionHeader } from './SectionHeader';
 
 const HEIGHT = 64;
-const LOW_SHARE = 0.15;
 const numberFormat = new Intl.NumberFormat();
 
-/** Smart Coach tokens left today, as a wide Control Center–style level. */
-export function TokenMeter() {
+/** Smart Coach tokens: today's free allowance as a wide Control Center–style level, plus the purchased balance. */
+export function TokenMeter({ onGetTokens }: { onGetTokens: () => void }) {
   const { colors, spacing, typography } = useTheme().theme;
   const { width: screenWidth } = useWindowDimensions();
-  const { plan, usedTokens, allowance, remaining } = useAiUsage();
-  const share = allowance > 0 ? remaining / allowance : 0;
-  const low = share < LOW_SHARE;
+  const { freeLeft, balance, available } = useTokens();
+  const empty = available <= 0;
 
-  const badge = (
-    <View
-      style={{
-        paddingHorizontal: spacing.sm + 2,
-        paddingVertical: 3,
+  const getTokens = (
+    <Pressable
+      accessibilityRole="button"
+      onPress={onGetTokens}
+      hitSlop={8}
+      style={({ pressed }) => ({
+        paddingHorizontal: spacing.sm + 4,
+        paddingVertical: 5,
         borderRadius: 999,
-        backgroundColor: plan === 'pro' ? colors.primary : colors.fill,
-      }}>
-      <Text
-        style={{
-          color: plan === 'pro' ? colors.onPrimary : colors.text,
-          fontFamily: typography.fontFamily.semiBold,
-          fontSize: typography.fontSize.xs,
-        }}>
-        {PLAN_LABELS[plan]} plan
+        backgroundColor: colors.primary,
+        opacity: pressed ? 0.8 : 1,
+      })}>
+      <Text style={{ color: colors.onPrimary, fontFamily: typography.fontFamily.semiBold, fontSize: typography.fontSize.xs }}>
+        Get tokens
       </Text>
-    </View>
+    </Pressable>
   );
 
   return (
     <View>
-      <SectionHeader title="Smart Coach" accessory={badge} />
-      <Text style={{ color: colors.text, fontFamily: typography.fontFamily.bold, fontSize: typography.fontSize.xl }}>
-        {numberFormat.format(remaining)}
+      <SectionHeader title="Smart Coach tokens" accessory={getTokens} />
+      <Text style={{ color: empty ? colors.danger : colors.text, fontFamily: typography.fontFamily.bold, fontSize: typography.fontSize.xl }}>
+        {numberFormat.format(available)}
         <Text style={{ color: colors.textSecondary, fontFamily: typography.fontFamily.medium, fontSize: typography.fontSize.sm }}>
           {' '}
-          tokens left today
+          tokens available
         </Text>
       </Text>
 
       <View style={{ marginTop: spacing.sm + 4 }}>
         <ControlSlider
-          value={share}
+          value={freeLeft / FREE_DAILY_TOKENS}
           width={screenWidth - spacing.lg * 2}
           height={HEIGHT}
           orientation="horizontal"
           Icon={SparkleIcon}
-          tint={low ? colors.secondary : colors.primary}
-          accessibilityLabel={`${numberFormat.format(remaining)} of ${numberFormat.format(allowance)} Smart Coach tokens left today`}
+          tint={freeLeft === 0 ? colors.danger : colors.primary}
+          accessibilityLabel={`${freeLeft} of ${FREE_DAILY_TOKENS} free tokens left today`}
         />
       </View>
 
-      <Text
-        style={{
-          marginTop: spacing.sm,
-          color: low ? colors.secondary : colors.textMuted,
-          fontFamily: typography.fontFamily.regular,
-          fontSize: typography.fontSize.xs,
-        }}>
-        {low
-          ? `Running low: ${numberFormat.format(usedTokens)} of ${numberFormat.format(allowance)} used. Resets at midnight.`
-          : `${numberFormat.format(usedTokens)} of ${numberFormat.format(allowance)} used today. Resets at midnight.`}
-      </Text>
+      <View style={{ flexDirection: 'row', marginTop: spacing.sm }}>
+        <Text style={{ flex: 1, color: colors.textMuted, fontFamily: typography.fontFamily.regular, fontSize: typography.fontSize.xs }}>
+          Free today: {freeLeft} of {FREE_DAILY_TOKENS} · resets at midnight
+        </Text>
+        <Text style={{ color: colors.textSecondary, fontFamily: typography.fontFamily.semiBold, fontSize: typography.fontSize.xs }}>
+          Purchased: {numberFormat.format(balance)}
+        </Text>
+      </View>
     </View>
   );
 }

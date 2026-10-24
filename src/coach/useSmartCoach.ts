@@ -2,7 +2,8 @@ import type { ChatSession, Content } from '@react-native-firebase/ai';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { toast } from '../components/toast/toastStore';
-import { recordAiUsage } from '../lib/aiUsage';
+import { assertTokensAvailable, OutOfTokensError, recordAiUsage } from '../lib/aiUsage';
+import { navigate } from '../navigation/quickNav';
 import { createTitle, saveConversation, type Conversation, type StoredMessage } from './chatHistory';
 import { recordHabit, recordQuizAnswer } from './habits';
 import { generateQuiz, QUIZ_LENGTH, type QuizQuestion, type QuizRequest } from './quiz';
@@ -49,6 +50,11 @@ type QuizRun = {
 };
 
 type StartQuizOptions = { topic?: string | null; request?: QuizRequest; silent?: boolean };
+
+const GET_TOKENS_ACTION = {
+  label: 'Get tokens',
+  onPress: () => navigate({ tab: 'profile', open: { type: 'tokens' } }),
+};
 
 /** Pause after an answer so the explanation can be read before the next question appears. */
 const NEXT_QUESTION_DELAY_MS = 1000;
@@ -172,6 +178,7 @@ export function useSmartCoach() {
       let topicReported = false;
 
       try {
+        assertTokensAvailable();
         const result = await chat.sendMessageStream(text, { signal: controller.signal });
         result.response.then(recordAiUsage, () => undefined);
 
@@ -201,6 +208,11 @@ export function useSmartCoach() {
           }
         } else if (options.silent) {
           setMessages((prev) => prev.filter((message) => message.id !== replyId && message.id !== userMessageId));
+        } else if (error instanceof OutOfTokensError) {
+          setMessages((prev) =>
+            prev.filter((message) => message.id !== replyId && !(options.hidden && message.id === userMessageId)),
+          );
+          toast.error(error.message, { action: GET_TOKENS_ACTION });
         } else {
           setMessages((prev) => prev.filter((message) => message.id !== replyId));
           toast.error(getCoachErrorMessage(error), {
@@ -323,7 +335,10 @@ export function useSmartCoach() {
         setMessages((prev) => prev.filter((message) => message.id !== placeholderId));
         if (!silent) {
           toast.error(error instanceof Error ? error.message : getCoachErrorMessage(error), {
-            action: { label: 'Retry', onPress: () => void startQuizRef.current({ topic }) },
+            action:
+              error instanceof OutOfTokensError
+                ? GET_TOKENS_ACTION
+                : { label: 'Retry', onPress: () => void startQuizRef.current({ topic }) },
           });
         }
       } finally {

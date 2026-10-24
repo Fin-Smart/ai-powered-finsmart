@@ -30,6 +30,7 @@ import {
 } from '../components/icons';
 import { Screen } from '../components/Screen';
 import { toast } from '../components/toast/toastStore';
+import { TokenStoreSheet } from '../components/tokens/TokenStoreSheet';
 import { useAuthUser } from '../hooks/useAuthUser';
 import { navigate } from '../navigation/quickNav';
 import { useTheme } from '../theme/ThemeProvider';
@@ -69,6 +70,7 @@ export function HomeScreen() {
   const { summaries, income, isLoading } = useBudgets();
   const alerts = useAlerts();
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [tokenStoreOpen, setTokenStoreOpen] = useState(false);
   const firstName = user?.displayName?.trim().split(/\s+/)[0];
 
   const addExpense = () => {
@@ -319,8 +321,9 @@ export function HomeScreen() {
 
         {unpaid.length > 0 ? <StillToPay items={unpaid.slice(0, MAX_UNPAID)} totalCount={unpaid.length} /> : null}
 
-        <TokenMeter />
+        <TokenMeter onGetTokens={() => setTokenStoreOpen(true)} />
       </View>
+      <TokenStoreSheet visible={tokenStoreOpen} onClose={() => setTokenStoreOpen(false)} />
     </Screen>
   );
 }

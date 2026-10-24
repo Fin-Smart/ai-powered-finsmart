@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useBudgets } from '../../budget/BudgetsProvider';
 import { formatMoney } from '../../budget/money';
 import { useHabitStats } from '../../coach/habits';
-import { dayKey, useAiUsage } from '../../lib/aiUsage';
+import { dayKey, useTokens } from '../../lib/aiUsage';
 import { navigate, type QuickIntent } from '../../navigation/quickNav';
 import { useTheme } from '../../theme/ThemeProvider';
 import {
@@ -37,7 +37,8 @@ const SEEN_KEY = 'home:seen-alerts';
 const MAX_SEEN = 100;
 const NEAR_LIMIT = 0.9;
 const MONTH_END_DAYS = 7;
-const LOW_TOKENS = 0.15;
+/** Roughly one Smart Coach reply. */
+const LOW_TOKENS = 1000;
 const INLINE_LIMIT = 3;
 const SHEET_CLOSE_MS = 450;
 
@@ -47,7 +48,7 @@ export function useAlerts(): Alert[] {
   const chart = useChartColors();
   const { summaries, income, isLoading } = useBudgets();
   const habits = useHabitStats();
-  const usage = useAiUsage();
+  const tokens = useTokens();
 
   return useMemo(() => {
     const alerts: Alert[] = [];
@@ -106,13 +107,17 @@ export function useAlerts(): Alert[] {
       });
     }
 
-    if (!usage.isLoading && usage.allowance > 0 && usage.remaining / usage.allowance < LOW_TOKENS) {
+    if (!tokens.isLoading && tokens.uid && tokens.available < LOW_TOKENS) {
       alerts.push({
-        id: `tokens:${dayKey()}`,
-        title: usage.remaining === 0 ? 'Smart Coach tokens used up' : 'Smart Coach tokens running low',
-        detail: 'Your daily allowance resets at midnight.',
+        id: `tokens:${dayKey()}:${tokens.available === 0 ? 'empty' : 'low'}`,
+        title: tokens.available === 0 ? "You're out of Smart Coach tokens" : 'Smart Coach tokens running low',
+        detail:
+          tokens.balance > 0
+            ? `${tokens.available} tokens left. Top up to keep chatting.`
+            : 'Free tokens reset at midnight, or buy a token pack to keep going.',
         Icon: SparkleIcon,
         color: chart.teal,
+        target: { tab: 'profile', open: { type: 'tokens' } },
       });
     }
 
@@ -128,7 +133,7 @@ export function useAlerts(): Alert[] {
     }
 
     return alerts;
-  }, [chart, colors.danger, habits.shieldFlagged, income, isLoading, summaries, usage]);
+  }, [chart, colors.danger, habits.shieldFlagged, income, isLoading, summaries, tokens]);
 }
 
 function AlertRow({ alert, onPress }: { alert: Alert; onPress?: () => void }) {

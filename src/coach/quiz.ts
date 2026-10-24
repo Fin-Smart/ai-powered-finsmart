@@ -2,7 +2,7 @@ import { AIError, getGenerativeModel, Schema, ThinkingLevel } from '@react-nativ
 
 import { budgetContextForCoach } from '../budget/coachContext';
 import { ai } from '../lib/ai';
-import { recordAiUsage } from '../lib/aiUsage';
+import { assertTokensAvailable, OutOfTokensError, recordAiUsage } from '../lib/aiUsage';
 import { habitsForCoach, recentQuizQuestions } from './habits';
 import { FAST_MODEL, getCoachErrorMessage, isTimeout } from './smartCoach';
 
@@ -87,6 +87,7 @@ async function generateBatch(focus: string, count: number): Promise<QuizQuestion
   const generate = () => quizModel.generateContent(prompt, { timeout: QUIZ_TIMEOUT_MS });
 
   try {
+    assertTokensAvailable();
     let result: Awaited<ReturnType<typeof generate>>;
     try {
       result = await generate();
@@ -103,6 +104,7 @@ async function generateBatch(focus: string, count: number): Promise<QuizQuestion
     if (usable.length === 0) throw new Error('empty quiz');
     return usable;
   } catch (error) {
+    if (error instanceof OutOfTokensError) throw error;
     throw new Error(
       error instanceof Error && error.message === 'empty quiz'
         ? "I couldn't put a quiz together this time. Please try again."

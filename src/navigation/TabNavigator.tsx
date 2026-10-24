@@ -9,7 +9,7 @@ import { useAuthUser } from '../hooks/useAuthUser';
 import { useKeyboardVisible } from '../hooks/useKeyboardVisible';
 import { restoreGoogleSession } from '../lib/googleAuth';
 import { setPendingSmsAction, usePendingSmsAction } from '../shield/smsLaunch';
-import { takeIntent, usePendingIntent } from './quickNav';
+import { setActiveTab, takeIntent, usePendingIntent } from './quickNav';
 import { AIScreen } from '../screens/AIScreen';
 import { HomeScreen } from '../screens/HomeScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
@@ -54,6 +54,10 @@ export function TabNavigator() {
   useEffect(() => {
     if (pendingSmsAction) selectTab('shield');
   }, [pendingSmsAction]);
+
+  useEffect(() => {
+    setActiveTab(activeTab);
+  }, [activeTab]);
 
   const quickIntent = usePendingIntent();
   useEffect(() => {

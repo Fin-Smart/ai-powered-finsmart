@@ -2,6 +2,7 @@ import { AIError, getGenerativeModel, ThinkingLevel, type Content } from '@react
 
 import { budgetContextForCoach } from '../budget/coachContext';
 import { ai } from '../lib/ai';
+import { OutOfTokensError } from '../lib/aiUsage';
 import { habitsForCoach } from './habits';
 
 export const COACH_MODEL = 'gemini-3.8-flash';
@@ -81,6 +82,7 @@ export function isTimeout(error: unknown) {
 }
 
 export function getCoachErrorMessage(error: unknown) {
+  if (error instanceof OutOfTokensError) return error.message;
   if (error instanceof AIError) {
     const status = error.customErrorData?.status;
 
