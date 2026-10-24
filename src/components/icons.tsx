@@ -33,6 +33,7 @@ import Briefcase01Icon from '@hugeicons/core-free-icons/Briefcase01Icon';
 import Calendar03Icon from '@hugeicons/core-free-icons/Calendar03Icon';
 import PiggyBankIcon from '@hugeicons/core-free-icons/PiggyBankIcon';
 import SparklesIcon from '@hugeicons/core-free-icons/SparklesIcon';
+import Notification01Icon from '@hugeicons/core-free-icons/Notification01Icon';
 import { HugeiconsIcon, type IconSvgElement } from '@hugeicons/react-native';
 
 export type IconProps = {
@@ -94,3 +95,4 @@ export const BusinessIcon = createIcon(Briefcase01Icon);
 export const EventIcon = createIcon(Calendar03Icon);
 export const SavingsIcon = createIcon(PiggyBankIcon);
 export const SparkleIcon = createIcon(SparklesIcon);
+export const BellIcon = createIcon(Notification01Icon);

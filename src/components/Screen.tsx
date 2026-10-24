@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { ScrollView, Text } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useTheme } from '../theme/ThemeProvider';
@@ -8,10 +8,12 @@ import { useBottomNavInset } from './BottomNav';
 type ScreenProps = {
   title: string;
   subtitle?: string;
+  /** Shown to the right of the title, e.g. an icon button. */
+  accessory?: ReactNode;
   children?: ReactNode;
 };
 
-export function Screen({ title, subtitle, children }: ScreenProps) {
+export function Screen({ title, subtitle, accessory, children }: ScreenProps) {
   const { colors, spacing, typography } = useTheme().theme;
   const insets = useSafeAreaInsets();
   const bottomInset = useBottomNavInset();
@@ -27,16 +29,21 @@ export function Screen({ title, subtitle, children }: ScreenProps) {
         paddingHorizontal: spacing.lg,
         paddingBottom: bottomInset,
       }}>
-      <Text
-        accessibilityRole="header"
-        style={{
-          fontFamily: typography.fontFamily.bold,
-          fontSize: typography.fontSize.xxl,
-          color: colors.text,
-          letterSpacing: -0.5,
-        }}>
-        {title}
-      </Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+        <Text
+          accessibilityRole="header"
+          numberOfLines={1}
+          style={{
+            flex: 1,
+            fontFamily: typography.fontFamily.bold,
+            fontSize: typography.fontSize.xxl,
+            color: colors.text,
+            letterSpacing: -0.5,
+          }}>
+          {title}
+        </Text>
+        {accessory}
+      </View>
       {subtitle ? (
         <Text
           style={{

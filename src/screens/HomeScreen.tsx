@@ -8,6 +8,7 @@ import type { BudgetSummary } from '../budget/types';
 import { useHabitStats } from '../coach/habits';
 import { ActivityRings, type Ring } from '../components/dashboard/ActivityRings';
 import { BudgetLevels } from '../components/dashboard/BudgetLevels';
+import { NotificationsButton } from '../components/dashboard/Notifications';
 import { useChartColors } from '../components/dashboard/palette';
 import { SpendingDonut, type Slice } from '../components/dashboard/SpendingDonut';
 import { StatTiles } from '../components/dashboard/StatTiles';
@@ -140,7 +141,10 @@ export function HomeScreen() {
   );
 
   return (
-    <Screen title={firstName ? `Hi, ${firstName}` : 'Home'} subtitle={todayFormat.format(now)}>
+    <Screen
+      title={firstName ? `Hi, ${firstName}` : 'Home'}
+      subtitle={todayFormat.format(now)}
+      accessory={<NotificationsButton />}>
       <View style={{ gap: spacing.xl, marginTop: spacing.lg }}>
         <View style={{ gap: spacing.md, padding: spacing.lg, borderRadius: radius.xl, backgroundColor: colors.surface }}>
           <View style={{ gap: 2 }}>
