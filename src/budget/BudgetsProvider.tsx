@@ -3,18 +3,19 @@ import { AppState } from 'react-native';
 
 import { toast } from '../components/toast/toastStore';
 import { useAuthUser } from '../hooks/useAuthUser';
-import { budgetErrorMessage, subscribeBudgets, subscribeTransactions } from './budgetRepo';
+import { budgetErrorMessage, subscribeBudgets, subscribeIncome, subscribeTransactions } from './budgetRepo';
 import { setCoachBudgets } from './coachContext';
 import { activePeriod } from './period';
-import type { Budget, BudgetSummary, BudgetTransaction } from './types';
+import type { Budget, BudgetSummary, BudgetTransaction, Income } from './types';
 
 type BudgetsContextValue = {
   uid: string | null;
   summaries: BudgetSummary[];
+  income: Income | null;
   isLoading: boolean;
 };
 
-const BudgetsContext = createContext<BudgetsContextValue>({ uid: null, summaries: [], isLoading: true });
+const BudgetsContext = createContext<BudgetsContextValue>({ uid: null, summaries: [], income: null, isLoading: true });
 
 const RETRY_DELAYS_MS = [2_000, 5_000, 15_000, 30_000];
 
@@ -56,6 +57,7 @@ export function BudgetsProvider({ children }: { children: ReactNode }) {
   const uid = user?.uid ?? null;
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [transactionsByBudget, setTransactionsByBudget] = useState<Record<string, BudgetTransaction[]>>({});
+  const [income, setIncome] = useState<Income | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [generation, setGeneration] = useState(0);
   const failures = useRef(0);
@@ -111,6 +113,14 @@ export function BudgetsProvider({ children }: { children: ReactNode }) {
     );
   }, [uid, generation, handleError]);
 
+  useEffect(() => {
+    if (!uid) {
+      setIncome(null);
+      return;
+    }
+    return subscribeIncome(uid, setIncome, (error) => handleError(error, "Couldn't load your income. Please try again."));
+  }, [uid, generation, handleError]);
+
   // One listener per budget, scoped to its active period. Re-subscribes when dates change.
   const periodKey = budgets
     .map((budget) => {
@@ -142,10 +152,10 @@ export function BudgetsProvider({ children }: { children: ReactNode }) {
   );
 
   useEffect(() => {
-    setCoachBudgets(summaries);
-  }, [summaries]);
+    setCoachBudgets(summaries, income);
+  }, [summaries, income]);
 
-  const value = useMemo(() => ({ uid, summaries, isLoading }), [uid, summaries, isLoading]);
+  const value = useMemo(() => ({ uid, summaries, income, isLoading }), [uid, summaries, income, isLoading]);
   return <BudgetsContext.Provider value={value}>{children}</BudgetsContext.Provider>;
 }
 

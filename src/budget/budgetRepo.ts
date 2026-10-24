@@ -14,9 +14,23 @@ import {
 } from '@react-native-firebase/firestore';
 
 import { db } from '../lib/firebase';
-import type { Budget, BudgetDraft, BudgetTransaction, TransactionDraft } from './types';
+import type { Budget, BudgetDraft, BudgetTransaction, Income, IncomeDraft, TransactionDraft } from './types';
 
+const profileRef = (uid: string) => doc(db, 'users', uid);
 const budgetsRef = (uid: string) => collection(db, 'users', uid, 'budgets');
+
+export function subscribeIncome(uid: string, onChange: (income: Income | null) => void, onError: (error: Error) => void) {
+  return onSnapshot(
+    profileRef(uid),
+    (snapshot) => onChange((snapshot.data()?.income as Income | null | undefined) ?? null),
+    onError,
+  );
+}
+
+/** `null` removes the income. */
+export function saveIncome(uid: string, income: IncomeDraft | null) {
+  return setDoc(profileRef(uid), { income: income ? { ...income, updatedAt: Date.now() } : null }, { merge: true });
+}
 const transactionsRef = (uid: string, budgetId: string) =>
   collection(db, 'users', uid, 'budgets', budgetId, 'transactions');
 
@@ -86,11 +100,13 @@ export async function deleteBudget(uid: string, budgetId: string) {
   await batch.commit();
 }
 
-export async function deleteAllBudgets(uid: string) {
+/** Removes every budget, transaction and the profile document, for account deletion. */
+export async function deleteUserData(uid: string) {
   const budgets = await getDocs(budgetsRef(uid));
   for (const budget of budgets.docs) {
     await deleteBudget(uid, budget.id);
   }
+  await deleteDoc(profileRef(uid));
 }
 
 export async function addTransaction(uid: string, budgetId: string, draft: TransactionDraft) {

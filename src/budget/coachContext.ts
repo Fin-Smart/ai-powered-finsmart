@@ -1,11 +1,14 @@
+import { allocateIncome } from './income';
 import { formatMoney } from './money';
-import type { BudgetSummary } from './types';
+import type { BudgetSummary, Income } from './types';
 
-/** Latest budgets, kept outside React so Smart Coach can read them when a chat starts. */
+/** Latest budgets and income, kept outside React so Smart Coach can read them when a chat starts. */
 let latest: BudgetSummary[] = [];
+let latestIncome: Income | null = null;
 
-export function setCoachBudgets(summaries: BudgetSummary[]) {
+export function setCoachBudgets(summaries: BudgetSummary[], income: Income | null) {
   latest = summaries;
+  latestIncome = income;
 }
 
 function describe({ budget, period, spentCents, receivedCents, remainingCents, spentByCategory, paidCategoryIds }: BudgetSummary) {
@@ -26,12 +29,28 @@ function describe({ budget, period, spentCents, receivedCents, remainingCents, s
   ].join(' ');
 }
 
-/** Budget facts for the system instruction, or null when the user has no budgets. */
-export function budgetContextForCoach() {
-  if (latest.length === 0) return null;
+function describeIncome(income: Income) {
+  const money = (cents: number) => formatMoney(cents, income.currency);
+  const { allocatedCents, freeCents } = allocateIncome(
+    income,
+    latest.map((summary) => summary.budget),
+  );
   return [
-    "The user's FinSmart budgets right now. Use them to personalise examples and advice when relevant,",
+    income.kind === 'monthly' ? `Income: ${money(income.amountCents)} per month.` : `Money they have: ${money(income.amountCents)}.`,
+    `${money(allocatedCents)} is assigned to budgets,`,
+    freeCents >= 0 ? `${money(freeCents)} is not budgeted yet.` : `budgets exceed it by ${money(-freeCents)}.`,
+  ].join(' ');
+}
+
+/** Budget facts for the system instruction, or null when the user has no budgets or income. */
+export function budgetContextForCoach() {
+  if (latest.length === 0 && !latestIncome) return null;
+  return [
+    "The user's FinSmart money and budgets right now. Use them to personalise examples and advice when relevant,",
     "but don't recite them unless asked. Never invent figures that aren't listed.",
+    latestIncome ? describeIncome(latestIncome) : null,
     ...latest.map(describe),
-  ].join('\n');
+  ]
+    .filter(Boolean)
+    .join('\n');
 }

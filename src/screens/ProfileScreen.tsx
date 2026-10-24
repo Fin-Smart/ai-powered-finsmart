@@ -7,6 +7,8 @@ import { CURRENCY_OPTIONS, setPreferredCurrency, usePreferredCurrency } from '..
 import { clearConversations } from '../coach/chatHistory';
 import { BudgetCard } from '../components/budget/BudgetCard';
 import { BudgetSheet, type BudgetSheetTarget } from '../components/budget/BudgetSheet';
+import { IncomeCard } from '../components/budget/IncomeCard';
+import { IncomeSheet } from '../components/budget/IncomeSheet';
 import { dialog } from '../components/dialog/dialogStore';
 import {
   AppearanceIcon,
@@ -47,6 +49,7 @@ export function ProfileScreen() {
   const { summaries, isLoading } = useBudgets();
   const currency = usePreferredCurrency();
   const [sheet, setSheet] = useState<BudgetSheetTarget | null>(null);
+  const [incomeOpen, setIncomeOpen] = useState(false);
   const [busy, setBusy] = useState<BusyAction>(null);
 
   const methods = user ? signInMethods(user) : [];
@@ -209,8 +212,14 @@ export function ProfileScreen() {
 
       <View style={{ gap: spacing.lg, marginTop: spacing.xl }}>
         <View style={{ gap: spacing.sm + 4 }}>
+          <Text
+            accessibilityRole="header"
+            style={{ color: colors.text, fontFamily: typography.fontFamily.semiBold, fontSize: typography.fontSize.lg }}>
+            Budgets
+          </Text>
+          <IncomeCard onPress={() => setIncomeOpen(true)} />
           {summaries.length > 0 ? (
-            <SettingsGroup title="Budgets">
+            <SettingsGroup>
               {summaries.map((summary) => (
                 <BudgetCard
                   key={summary.budget.id}
@@ -219,13 +228,7 @@ export function ProfileScreen() {
                 />
               ))}
             </SettingsGroup>
-          ) : (
-            <Text
-              accessibilityRole="header"
-              style={{ color: colors.text, fontFamily: typography.fontFamily.semiBold, fontSize: typography.fontSize.lg }}>
-              Budgets
-            </Text>
-          )}
+          ) : null}
           <SettingsGroup
             footer={
               !isLoading && summaries.length === 0
@@ -275,6 +278,7 @@ export function ProfileScreen() {
       </View>
 
       <BudgetSheet target={sheet} onClose={() => setSheet(null)} />
+      <IncomeSheet visible={incomeOpen} onClose={() => setIncomeOpen(false)} />
     </Screen>
   );
 }

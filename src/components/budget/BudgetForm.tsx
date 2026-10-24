@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { Keyboard, Pressable, Text, TextInput, View } from 'react-native';
 
 import type { BudgetPlan } from '../../budget/budgetPlanner';
+import { useBudgets } from '../../budget/BudgetsProvider';
+import { allocateIncome } from '../../budget/income';
 import { centsToInput, defaultCurrency, formatMoney, parseMoney } from '../../budget/money';
 import { startOfDay } from '../../budget/period';
 import type { Budget, BudgetDraft, BudgetKind } from '../../budget/types';
@@ -31,7 +33,8 @@ type BudgetFormProps = {
 export function BudgetForm({ initial, onSubmit, onDelete }: BudgetFormProps) {
   const { colors, spacing, typography } = useTheme().theme;
   const inputStyle = useInputStyle();
-  const currency = initial?.currency ?? defaultCurrency();
+  const { income, summaries } = useBudgets();
+  const currency = initial?.currency ?? income?.currency ?? defaultCurrency();
   const today = startOfDay(Date.now());
 
   const [name, setName] = useState(initial?.name ?? '');
@@ -53,6 +56,14 @@ export function BudgetForm({ initial, onSubmit, onDelete }: BudgetFormProps) {
   const availableCents = parseMoney(available) ?? 0;
   const allocatedCents = categories.reduce((total, row) => total + (parseMoney(row.limit) ?? 0), 0);
   const unallocatedCents = availableCents - allocatedCents;
+  const incomeFreeCents =
+    income && income.currency === currency
+      ? allocateIncome(
+          income,
+          summaries.map((summary) => summary.budget),
+          initial?.id,
+        ).freeCents
+      : null;
 
   const changeKind = (next: BudgetKind) => {
     setKind(next);
@@ -160,12 +171,40 @@ export function BudgetForm({ initial, onSubmit, onDelete }: BudgetFormProps) {
         </View>
       ) : null}
 
-      <MoneyField
-        label={kind === 'monthly' ? 'Money available each month' : 'Total money available'}
-        currency={currency}
-        value={available}
-        onChangeText={setAvailable}
-      />
+      <View style={{ gap: spacing.xs + 2 }}>
+        <MoneyField
+          label={kind === 'monthly' ? 'Money available each month' : 'Total money available'}
+          currency={currency}
+          value={available}
+          onChangeText={setAvailable}
+        />
+        {incomeFreeCents !== null ? (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+            <Text
+              style={{
+                flex: 1,
+                color: availableCents > incomeFreeCents ? colors.secondary : colors.textMuted,
+                fontFamily: typography.fontFamily.medium,
+                fontSize: typography.fontSize.xs,
+              }}>
+              {incomeFreeCents <= 0 && availableCents === 0
+                ? 'All of your income is already in budgets'
+                : availableCents > incomeFreeCents
+                  ? `${formatMoney(availableCents - Math.max(incomeFreeCents, 0), currency)} more than you have free`
+                  : `${formatMoney(incomeFreeCents - availableCents, currency)} of your income still free`}
+            </Text>
+            {incomeFreeCents > 0 && availableCents !== incomeFreeCents ? (
+              <Text
+                accessibilityRole="button"
+                onPress={() => setAvailable(centsToInput(incomeFreeCents))}
+                suppressHighlighting
+                style={{ color: colors.primary, fontFamily: typography.fontFamily.semiBold, fontSize: typography.fontSize.xs }}>
+                Use {formatMoney(incomeFreeCents, currency)}
+              </Text>
+            ) : null}
+          </View>
+        ) : null}
+      </View>
 
       <View style={{ gap: spacing.sm }}>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>

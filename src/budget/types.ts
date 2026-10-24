@@ -25,6 +25,18 @@ export type Budget = {
 
 export type BudgetDraft = Omit<Budget, 'id' | 'createdAt' | 'updatedAt'>;
 
+/** `monthly` is a salary that repeats; `total` is a fixed amount of money the person has. */
+export type IncomeKind = 'monthly' | 'total';
+
+export type Income = {
+  kind: IncomeKind;
+  amountCents: number;
+  currency: string;
+  updatedAt: number;
+};
+
+export type IncomeDraft = Omit<Income, 'updatedAt'>;
+
 export type TransactionDirection = 'out' | 'in';
 export type TransactionSource = 'manual' | 'sms' | 'email';
 

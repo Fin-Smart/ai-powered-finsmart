@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { deleteUser, sendEmailVerification, sendPasswordResetEmail, type User } from '@react-native-firebase/auth';
 
-import { deleteAllBudgets } from '../budget/budgetRepo';
+import { deleteUserData } from '../budget/budgetRepo';
 import { clearConversations } from '../coach/chatHistory';
 import { auth } from './firebase';
 import { reauthenticateWithGoogle, revokeGoogleAccess, signOutEverywhere } from './googleAuth';
@@ -50,7 +50,7 @@ export async function deleteAccount(): Promise<boolean> {
     if (!(await reauthenticateWithGoogle())) return false;
   }
 
-  await deleteAllBudgets(user.uid);
+  await deleteUserData(user.uid);
   await clearConversations();
   await AsyncStorage.multiRemove(['shield:gmail-enabled', 'settings:currency']).catch(() => undefined);
   await revokeGoogleAccess();
