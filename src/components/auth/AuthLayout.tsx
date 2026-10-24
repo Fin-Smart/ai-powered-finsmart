@@ -78,7 +78,7 @@ export function AuthLayout({ title, subtitle, compact, onBack, footer, children 
             <GlassSurface
               style={{
                 position: 'absolute',
-                top: insets.top + spacing.sm,
+                top: insets.top + spacing.sm + 10,
                 left: spacing.md,
                 width: 44,
                 height: 44,
