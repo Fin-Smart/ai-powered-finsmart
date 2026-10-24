@@ -3,6 +3,7 @@ import { Modal, Platform, Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useTheme } from '../theme/ThemeProvider';
+import { ToastViewport } from './toast/ToastViewport';
 
 type SheetProps = {
   visible: boolean;
@@ -58,6 +59,7 @@ export function Sheet({ visible, title, subtitle, onClose, children }: SheetProp
           </Pressable>
         </View>
         {children}
+        <ToastViewport topOffset={Platform.OS === 'android' ? insets.top + spacing.sm : spacing.sm + 4} />
       </View>
     </Modal>
   );

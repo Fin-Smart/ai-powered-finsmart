@@ -1,6 +1,7 @@
 import type { ChatSession, Content } from '@react-native-firebase/ai';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { toast } from '../components/toast/toastStore';
 import { createTitle, saveConversation, type Conversation, type StoredMessage } from './chatHistory';
 import { getCoachErrorMessage, startCoachChat } from './smartCoach';
 
@@ -8,7 +9,7 @@ export type CoachMessage = {
   id: string;
   role: 'user' | 'coach';
   text: string;
-  status: 'streaming' | 'done' | 'error';
+  status: 'streaming' | 'done';
 };
 
 let idCounter = 0;
@@ -46,6 +47,7 @@ export function useSmartCoach() {
   const respondingRef = useRef(false);
   const conversationIdRef = useRef<string | null>(null);
   const savedTurnCountRef = useRef(0);
+  const sendRef = useRef<(input: string) => Promise<void>>(async () => undefined);
   const [messages, setMessages] = useState<CoachMessage[]>([]);
   const [isResponding, setIsResponding] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
@@ -74,6 +76,7 @@ export function useSmartCoach() {
       }
       chatRef.current ??= startCoachChat();
       const chat = chatRef.current;
+      const userMessageId = createId();
       const replyId = createId();
       const controller = new AbortController();
 
@@ -82,7 +85,7 @@ export function useSmartCoach() {
       setIsResponding(true);
       setMessages((prev) => [
         ...prev,
-        { id: createId(), role: 'user', text, status: 'done' },
+        { id: userMessageId, role: 'user', text, status: 'done' },
         { id: replyId, role: 'coach', text: '', status: 'streaming' },
       ]);
 
@@ -105,10 +108,20 @@ export function useSmartCoach() {
             setMessages((prev) => prev.filter((message) => message.id !== replyId));
           }
         } else {
-          if (__DEV__) {
-            console.warn('[Smart Coach]', error);
-          }
-          updateMessage(replyId, { text: getCoachErrorMessage(error), status: 'error' });
+          setMessages((prev) => prev.filter((message) => message.id !== replyId));
+          toast.error(getCoachErrorMessage(error), {
+            action: {
+              label: 'Retry',
+              onPress: () => {
+                if (respondingRef.current) {
+                  toast.info('Wait for the current reply to finish, then try again.');
+                  return;
+                }
+                setMessages((prev) => prev.filter((message) => message.id !== userMessageId));
+                void sendRef.current(text);
+              },
+            },
+          });
         }
       } finally {
         if (abortRef.current === controller) {
@@ -133,20 +146,14 @@ export function useSmartCoach() {
     }
 
     savedTurnCountRef.current = turns.length;
-    void saveConversation({ id, title: createTitle(turns[0].text), updatedAt: Date.now(), messages: turns });
+    saveConversation({ id, title: createTitle(turns[0].text), updatedAt: Date.now(), messages: turns }).catch(() =>
+      toast.error("Couldn't save this chat to your history."),
+    );
   }, [messages, isResponding]);
 
-  const retry = useCallback(() => {
-    const lastUserMessage = messages.findLast((message) => message.role === 'user');
-    if (!lastUserMessage) {
-      return;
-    }
-
-    setMessages((prev) =>
-      prev.filter((message) => message.id !== lastUserMessage.id && message.status !== 'error'),
-    );
-    void send(lastUserMessage.text);
-  }, [messages, send]);
+  useEffect(() => {
+    sendRef.current = send;
+  }, [send]);
 
   const reset = useCallback(() => {
     cancelResponse();
@@ -176,7 +183,6 @@ export function useSmartCoach() {
     isResponding,
     conversationId,
     send,
-    retry,
     stop: cancelResponse,
     reset,
     openConversation,

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { AppState, PermissionsAndroid, Platform } from 'react-native';
 
 import FinsmartSms, { type SmsConversation } from '../../modules/finsmart-sms';
+import { errorMessage, toast } from '../components/toast/toastStore';
 
 const SCAN_LIMIT = 1500;
 
@@ -41,7 +42,7 @@ export function useSmsInbox() {
     try {
       setConversations(await FinsmartSms.getConversations(SCAN_LIMIT));
     } catch (error) {
-      if (__DEV__) console.warn('[Shield] loading texts failed', error);
+      toast.error(errorMessage(error, "Couldn't load your texts. Please try again."));
     } finally {
       setIsLoading(false);
     }
@@ -67,9 +68,17 @@ export function useSmsInbox() {
     setIsRequesting(true);
     try {
       const granted = await FinsmartSms.requestDefaultSmsApp();
-      if (granted) await requestRuntimePermissions();
+      if (granted) {
+        await requestRuntimePermissions();
+        toast.success('FinSmart is now your SMS app');
+      } else {
+        toast.info("FinSmart wasn't set as your SMS app. Shield can't check your texts until it is.");
+      }
       await refresh();
       return granted;
+    } catch (error) {
+      toast.error(errorMessage(error, "Couldn't change your SMS app. Please try again."));
+      return false;
     } finally {
       setIsRequesting(false);
     }

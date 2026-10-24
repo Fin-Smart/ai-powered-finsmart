@@ -6,6 +6,8 @@ import { deleteConversation, loadConversations, type Conversation } from '../../
 import { formatWhen } from '../../lib/formatWhen';
 import { useTheme } from '../../theme/ThemeProvider';
 import { HistoryIcon } from '../icons';
+import { errorMessage, toast } from '../toast/toastStore';
+import { ToastViewport } from '../toast/ToastViewport';
 
 type HistorySheetProps = {
   visible: boolean;
@@ -40,9 +42,14 @@ export function HistorySheet({ visible, activeConversationId, onClose, onSelect,
         text: 'Delete',
         style: 'destructive',
         onPress: async () => {
-          await deleteConversation(conversation.id);
-          setConversations((prev) => prev?.filter((item) => item.id !== conversation.id) ?? null);
-          onDeleted(conversation.id);
+          try {
+            await deleteConversation(conversation.id);
+            setConversations((prev) => prev?.filter((item) => item.id !== conversation.id) ?? null);
+            onDeleted(conversation.id);
+            toast.success('Chat deleted');
+          } catch (error) {
+            toast.error(errorMessage(error, "Couldn't delete this chat. Please try again."));
+          }
         },
       },
     ]);
@@ -181,6 +188,7 @@ export function HistorySheet({ visible, activeConversationId, onClose, onSelect,
             }}
           />
         )}
+        <ToastViewport topOffset={Platform.OS === 'android' ? insets.top + spacing.sm : spacing.sm + 4} />
       </View>
     </Modal>
   );

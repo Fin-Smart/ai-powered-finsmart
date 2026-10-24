@@ -1,6 +1,7 @@
 import Alert02Icon from '@hugeicons/core-free-icons/Alert02Icon';
 import ArrowLeft01Icon from '@hugeicons/core-free-icons/ArrowLeft01Icon';
 import GoogleIcon from '@hugeicons/core-free-icons/GoogleIcon';
+import InformationCircleIcon from '@hugeicons/core-free-icons/InformationCircleIcon';
 import LockPasswordIcon from '@hugeicons/core-free-icons/LockPasswordIcon';
 import MailSend01Icon from '@hugeicons/core-free-icons/MailSend01Icon';
 import ViewIcon from '@hugeicons/core-free-icons/ViewIcon';
@@ -58,6 +59,7 @@ export const MessageIcon = createIcon(Message01Icon);
 export const MailIcon = createIcon(Mail01Icon);
 export const AlertIcon = createIcon(Alert02Icon);
 export const CheckIcon = createIcon(CheckmarkCircle02Icon);
+export const InfoIcon = createIcon(InformationCircleIcon);
 export const BackIcon = createIcon(ArrowLeft01Icon);
 export const GoogleLogoIcon = createIcon(GoogleIcon);
 export const LockIcon = createIcon(LockPasswordIcon);

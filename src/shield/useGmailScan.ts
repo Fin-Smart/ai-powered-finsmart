@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Alert } from 'react-native';
 
+import { errorMessage, toast } from '../components/toast/toastStore';
 import { useAuthUser } from '../hooks/useAuthUser';
 import { auth } from '../lib/firebase';
 import {
@@ -22,27 +22,35 @@ export function useGmailScan() {
   const [emails, setEmails] = useState<GmailMessage[]>([]);
   const [isConnecting, setIsConnecting] = useState(false);
 
+  /** Resolves true when the inbox loaded. */
   const refresh = useCallback(async () => {
-    if (!isGoogleSignInAvailable) return;
+    if (!isGoogleSignInAvailable) return false;
     if (!auth.currentUser) {
       setStatus('signedOut');
       setEmails([]);
-      return;
+      return false;
     }
 
     await restoreGoogleSession();
     if (!hasGmailAccess()) {
       setStatus('needsAccess');
-      return;
+      return false;
     }
 
     setStatus('loading');
     try {
       setEmails(await fetchRecentEmails(await getGoogleAccessToken()));
       setStatus('ready');
+      return true;
     } catch (error) {
-      if (__DEV__) console.warn('[Shield] loading Gmail failed', error);
-      setStatus(error instanceof GmailAuthError ? 'needsAccess' : 'error');
+      if (error instanceof GmailAuthError) {
+        setStatus('needsAccess');
+        toast.error('Gmail access expired. Tap Connect Gmail to reconnect.');
+      } else {
+        setStatus('error');
+        toast.error(errorMessage(error, "Couldn't load your Gmail. Please try again."));
+      }
+      return false;
     }
   }, []);
 
@@ -54,10 +62,14 @@ export function useGmailScan() {
     setIsConnecting(true);
     try {
       const hasSession = auth.currentUser ? await ensureGoogleSession() : await signInWithGoogle();
-      if (!hasSession || !(await requestGmailAccess())) return;
-      await refresh();
+      if (!hasSession) return;
+      if (!(await requestGmailAccess())) {
+        toast.info('Gmail access is needed for Shield to check your emails.');
+        return;
+      }
+      if (await refresh()) toast.success('Gmail connected');
     } catch (error) {
-      Alert.alert("Couldn't connect Gmail", error instanceof Error ? error.message : 'Please try again.');
+      toast.error(errorMessage(error, "Couldn't connect Gmail. Please try again."));
     } finally {
       setIsConnecting(false);
     }

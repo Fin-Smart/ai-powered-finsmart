@@ -10,13 +10,14 @@ type AuthFieldProps = Omit<TextInputProps, 'style' | 'placeholderTextColor'> & {
   ref?: Ref<TextInputInstance>;
   label: string;
   Icon: ComponentType<IconProps>;
-  error?: string | null;
+  /** Outlines the field; the message itself is shown as a toast by the form. */
+  invalid?: boolean;
   hint?: string;
   /** Renders a show/hide toggle and starts hidden. */
   password?: boolean;
 };
 
-export function AuthField({ ref, label, Icon, error, hint, password, onFocus, onBlur, ...inputProps }: AuthFieldProps) {
+export function AuthField({ ref, label, Icon, invalid, hint, password, onFocus, onBlur, ...inputProps }: AuthFieldProps) {
   const { colors, spacing, typography } = useTheme().theme;
   const [focused, setFocused] = useState(false);
   const [revealed, setRevealed] = useState(false);
@@ -38,14 +39,14 @@ export function AuthField({ ref, label, Icon, error, hint, password, onFocus, on
           paddingRight: password ? spacing.xs : spacing.md,
           backgroundColor: colors.fill,
           borderWidth: 1.5,
-          borderColor: error ? colors.secondary : focused ? colors.primary : 'transparent',
+          borderColor: invalid ? colors.secondary : focused ? colors.primary : 'transparent',
         }}>
         <Icon size={20} color={focused ? colors.primary : colors.textMuted} />
         <TextInput
           ref={ref}
           {...inputProps}
           accessibilityLabel={label}
-          accessibilityHint={error ?? hint}
+          accessibilityHint={hint}
           secureTextEntry={password && !revealed}
           placeholderTextColor={colors.textMuted}
           onFocus={(event) => {
@@ -81,16 +82,15 @@ export function AuthField({ ref, label, Icon, error, hint, password, onFocus, on
         ) : null}
       </View>
 
-      {error || hint ? (
+      {hint ? (
         <Text
-          accessibilityLiveRegion={error ? 'polite' : 'none'}
           style={{
             paddingHorizontal: spacing.sm,
-            color: error ? colors.secondary : colors.textMuted,
+            color: colors.textMuted,
             fontFamily: typography.fontFamily.regular,
             fontSize: typography.fontSize.xs,
           }}>
-          {error ?? hint}
+          {hint}
         </Text>
       ) : null}
     </View>

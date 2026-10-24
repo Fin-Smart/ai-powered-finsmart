@@ -2,10 +2,12 @@ import { useRef, useState } from 'react';
 import { Keyboard, Text, type TextInputInstance } from 'react-native';
 
 import { AuthField } from '../../components/auth/AuthField';
-import { FormError, GoogleButton, PrimaryButton, TextLink } from '../../components/auth/AuthButtons';
+import { GoogleButton, PrimaryButton, TextLink } from '../../components/auth/AuthButtons';
 import { AuthLayout } from '../../components/auth/AuthLayout';
 import { LockIcon, MailIcon } from '../../components/icons';
-import { authErrorMessage, isValidEmail, logIn } from '../../lib/emailAuth';
+import { toast } from '../../components/toast/toastStore';
+import { authErrorMessage, isValidEmail, logIn, welcomeMessage } from '../../lib/emailAuth';
+import { auth } from '../../lib/firebase';
 import { signInWithGoogle } from '../../lib/googleAuth';
 import { useTheme } from '../../theme/ThemeProvider';
 
@@ -22,33 +24,37 @@ export function LoginScreen({ initialEmail, onRegister, onForgotPassword }: Logi
   const [password, setPassword] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const [busy, setBusy] = useState<'email' | 'google' | null>(null);
-  const [error, setError] = useState<string | null>(null);
 
-  const emailError = submitted && !isValidEmail(email) ? 'Enter a valid email address.' : null;
-  const passwordError = submitted && !password ? 'Enter your password.' : null;
+  const emailInvalid = submitted && !isValidEmail(email);
+  const passwordInvalid = submitted && !password;
 
   const submit = async () => {
     setSubmitted(true);
-    setError(null);
-    if (!isValidEmail(email) || !password) return;
+    const problem = !isValidEmail(email) ? 'Enter a valid email address.' : !password ? 'Enter your password.' : null;
+    if (problem) {
+      toast.error(problem);
+      return;
+    }
 
     Keyboard.dismiss();
     setBusy('email');
     try {
-      await logIn(email, password);
+      const user = await logIn(email, password);
+      toast.success(welcomeMessage(user.displayName));
     } catch (caught) {
-      setError(authErrorMessage(caught));
+      toast.error(authErrorMessage(caught));
       setBusy(null);
     }
   };
 
   const continueWithGoogle = async () => {
-    setError(null);
     setBusy('google');
     try {
-      await signInWithGoogle();
+      if (await signInWithGoogle()) {
+        toast.success(welcomeMessage(auth.currentUser?.displayName));
+      }
     } catch (caught) {
-      setError(authErrorMessage(caught));
+      toast.error(authErrorMessage(caught));
     } finally {
       setBusy(null);
     }
@@ -69,7 +75,7 @@ export function LoginScreen({ initialEmail, onRegister, onForgotPassword }: Logi
         Icon={MailIcon}
         value={email}
         onChangeText={setEmail}
-        error={emailError}
+        invalid={emailInvalid}
         placeholder="you@example.com"
         keyboardType="email-address"
         autoCapitalize="none"
@@ -88,7 +94,7 @@ export function LoginScreen({ initialEmail, onRegister, onForgotPassword }: Logi
         Icon={LockIcon}
         value={password}
         onChangeText={setPassword}
-        error={passwordError}
+        invalid={passwordInvalid}
         placeholder="Your password"
         autoCapitalize="none"
         autoCorrect={false}
@@ -113,7 +119,6 @@ export function LoginScreen({ initialEmail, onRegister, onForgotPassword }: Logi
         Forgot password?
       </Text>
 
-      <FormError message={error} />
       <PrimaryButton label="Log in" onPress={submit} busy={busy === 'email'} />
     </AuthLayout>
   );

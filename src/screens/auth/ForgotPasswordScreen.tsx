@@ -2,9 +2,10 @@ import { useState } from 'react';
 import { Keyboard, Text, View } from 'react-native';
 
 import { AuthField } from '../../components/auth/AuthField';
-import { FormError, PrimaryButton, TextLink } from '../../components/auth/AuthButtons';
+import { PrimaryButton, TextLink } from '../../components/auth/AuthButtons';
 import { AuthLayout } from '../../components/auth/AuthLayout';
 import { MailIcon, MailSentIcon } from '../../components/icons';
+import { toast } from '../../components/toast/toastStore';
 import { authErrorMessage, isValidEmail, sendResetLink } from '../../lib/emailAuth';
 import { useTheme } from '../../theme/ThemeProvider';
 
@@ -18,23 +19,25 @@ export function ForgotPasswordScreen({ initialEmail, onBack }: ForgotPasswordScr
   const [email, setEmail] = useState(initialEmail);
   const [submitted, setSubmitted] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [sentTo, setSentTo] = useState<string | null>(null);
 
-  const emailError = submitted && !isValidEmail(email) ? 'Enter a valid email address.' : null;
+  const emailInvalid = submitted && !isValidEmail(email);
 
   const submit = async () => {
     setSubmitted(true);
-    setError(null);
-    if (!isValidEmail(email)) return;
+    if (!isValidEmail(email)) {
+      toast.error('Enter a valid email address.');
+      return;
+    }
 
     Keyboard.dismiss();
     setBusy(true);
     try {
       await sendResetLink(email);
       setSentTo(email.trim());
+      toast.success('Reset link sent');
     } catch (caught) {
-      setError(authErrorMessage(caught));
+      toast.error(authErrorMessage(caught));
     } finally {
       setBusy(false);
     }
@@ -71,7 +74,6 @@ export function ForgotPasswordScreen({ initialEmail, onBack }: ForgotPasswordScr
           }}>
           The link expires after an hour. Check your spam folder if you can't find it.
         </Text>
-        <FormError message={error} />
         <PrimaryButton label="Back to log in" onPress={() => onBack(sentTo)} />
       </AuthLayout>
     );
@@ -88,7 +90,7 @@ export function ForgotPasswordScreen({ initialEmail, onBack }: ForgotPasswordScr
         Icon={MailIcon}
         value={email}
         onChangeText={setEmail}
-        error={emailError}
+        invalid={emailInvalid}
         placeholder="you@example.com"
         keyboardType="email-address"
         autoCapitalize="none"
@@ -98,7 +100,6 @@ export function ForgotPasswordScreen({ initialEmail, onBack }: ForgotPasswordScr
         returnKeyType="send"
         onSubmitEditing={submit}
       />
-      <FormError message={error} />
       <PrimaryButton label="Send reset link" onPress={submit} busy={busy} />
     </AuthLayout>
   );

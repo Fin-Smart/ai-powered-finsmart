@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { ActivityIndicator, Alert, Image, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, Image, Pressable, Text, View } from 'react-native';
 
 import { ProfileIcon } from '../components/icons';
 import { Screen } from '../components/Screen';
+import { errorMessage, toast } from '../components/toast/toastStore';
 import { useAuthUser } from '../hooks/useAuthUser';
 import { signOutEverywhere } from '../lib/googleAuth';
 import { useTheme } from '../theme/ThemeProvider';
@@ -18,9 +19,10 @@ export function ProfileScreen() {
     setIsSigningOut(true);
     try {
       await signOutEverywhere();
+      toast.success('Signed out');
     } catch (error) {
       setIsSigningOut(false);
-      Alert.alert("Couldn't sign out", error instanceof Error ? error.message : 'Please try again.');
+      toast.error(errorMessage(error, "Couldn't sign out. Please try again."));
     }
   };
 

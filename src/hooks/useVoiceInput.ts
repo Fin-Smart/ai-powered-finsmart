@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, Animated, Linking } from 'react-native';
+import { Animated, Linking } from 'react-native';
 
+import { toast } from '../components/toast/toastStore';
 import { speechRecognition } from '../lib/speech';
 
 const IGNORED_ERRORS = new Set(['aborted', 'no-speech', 'speech-timeout', 'interrupted']);
@@ -10,15 +11,10 @@ const RECOGNITION_LANG = deviceLocale?.toLowerCase().startsWith('en') ? deviceLo
 
 const joinText = (...parts: string[]) => parts.map((part) => part.trim()).filter(Boolean).join(' ');
 
-function showPermissionAlert() {
-  Alert.alert(
-    'Microphone access needed',
-    'Allow microphone and speech recognition access in Settings to talk to Smart Coach.',
-    [
-      { text: 'Not now', style: 'cancel' },
-      { text: 'Open Settings', onPress: () => void Linking.openSettings() },
-    ],
-  );
+function showPermissionToast() {
+  toast.error('Allow microphone and speech recognition access to talk to Smart Coach.', {
+    action: { label: 'Settings', onPress: () => void Linking.openSettings() },
+  });
 }
 
 /** Live dictation: calls `onTranscript` with the full text (existing draft + speech) as words arrive. */
@@ -59,13 +55,13 @@ export function useVoiceInput(onTranscript: (text: string) => void) {
           return;
         }
         if (event.error === 'not-allowed') {
-          showPermissionAlert();
+          showPermissionToast();
         } else if (event.error === 'network') {
-          Alert.alert('No connection', 'Voice input needs an internet connection on this device.');
+          toast.error('Voice input needs an internet connection on this device.');
         } else if (event.error === 'language-not-supported') {
-          Alert.alert('Language not supported', "Voice input doesn't support your device language yet.");
+          toast.error("Voice input doesn't support your device language yet.");
         } else {
-          Alert.alert("Couldn't hear you", 'Something went wrong with voice input. Please try again.');
+          toast.error("Couldn't hear you. Please try again.");
         }
       }),
       recognizer.addListener('volumechange', (event) => {
@@ -83,20 +79,17 @@ export function useVoiceInput(onTranscript: (text: string) => void) {
     const recognizer = speechRecognition?.ExpoSpeechRecognitionModule;
 
     if (!recognizer) {
-      Alert.alert(
-        'Voice input unavailable',
-        "Voice input works in the installed FinSmart app, but it isn't available in Expo Go.",
-      );
+      toast.error("Voice input isn't available in this build of FinSmart.");
       return;
     }
     if (!recognizer.isRecognitionAvailable()) {
-      Alert.alert('Voice input unavailable', "Speech recognition isn't available on this device.");
+      toast.error("Speech recognition isn't available on this device.");
       return;
     }
 
     const permission = await recognizer.requestPermissionsAsync();
     if (!permission.granted) {
-      showPermissionAlert();
+      showPermissionToast();
       return;
     }
 

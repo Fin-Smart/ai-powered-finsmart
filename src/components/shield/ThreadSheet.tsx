@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, FlatList, KeyboardAvoidingView, Pressable, Text, TextInput, View } from 'react-native';
+import { FlatList, KeyboardAvoidingView, Pressable, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import FinsmartSms, { type SmsMessage } from '../../../modules/finsmart-sms';
@@ -8,6 +8,7 @@ import { assessMessage } from '../../shield/scamDetector';
 import { useTheme } from '../../theme/ThemeProvider';
 import { PaperPlaneIcon } from '../icons';
 import { Sheet } from '../Sheet';
+import { errorMessage, toast } from '../toast/toastStore';
 import { RiskBadge } from './RiskBadge';
 import { ScamVerdict } from './ScamVerdict';
 
@@ -30,8 +31,12 @@ export function ThreadSheet({ thread, onClose }: ThreadSheetProps) {
 
   const load = useCallback(async () => {
     if (!FinsmartSms || !threadId) return;
-    setMessages(await FinsmartSms.getMessages(threadId, MESSAGE_LIMIT));
-    await FinsmartSms.markThreadRead(threadId);
+    try {
+      setMessages(await FinsmartSms.getMessages(threadId, MESSAGE_LIMIT));
+      await FinsmartSms.markThreadRead(threadId);
+    } catch (error) {
+      toast.error(errorMessage(error, "Couldn't load this conversation. Please try again."));
+    }
   }, [threadId]);
 
   useEffect(() => {
@@ -61,7 +66,7 @@ export function ThreadSheet({ thread, onClose }: ThreadSheetProps) {
       setDraft('');
       await load();
     } catch (error) {
-      Alert.alert('Message not sent', error instanceof Error ? error.message : 'Please try again.');
+      toast.error(errorMessage(error, 'Message not sent. Please try again.'));
     } finally {
       setIsSending(false);
     }

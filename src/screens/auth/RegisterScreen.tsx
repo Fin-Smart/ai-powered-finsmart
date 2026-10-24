@@ -1,13 +1,14 @@
 import { useRef, useState } from 'react';
-import { Keyboard, Text, type TextInputInstance } from 'react-native';
+import { Keyboard, type TextInputInstance } from 'react-native';
 
 import { AuthField } from '../../components/auth/AuthField';
-import { FormError, GoogleButton, PrimaryButton, TextLink } from '../../components/auth/AuthButtons';
+import { GoogleButton, PrimaryButton, TextLink } from '../../components/auth/AuthButtons';
 import { AuthLayout } from '../../components/auth/AuthLayout';
 import { LockIcon, MailIcon, ProfileIcon } from '../../components/icons';
-import { authErrorMessage, isValidEmail, MIN_PASSWORD_LENGTH, register } from '../../lib/emailAuth';
+import { toast } from '../../components/toast/toastStore';
+import { authErrorMessage, isValidEmail, MIN_PASSWORD_LENGTH, register, welcomeMessage } from '../../lib/emailAuth';
+import { auth } from '../../lib/firebase';
 import { signInWithGoogle } from '../../lib/googleAuth';
-import { useTheme } from '../../theme/ThemeProvider';
 
 type RegisterScreenProps = {
   initialEmail: string;
@@ -16,7 +17,6 @@ type RegisterScreenProps = {
 };
 
 export function RegisterScreen({ initialEmail, onBack, onLogIn }: RegisterScreenProps) {
-  const { colors, typography } = useTheme().theme;
   const emailRef = useRef<TextInputInstance>(null);
   const passwordRef = useRef<TextInputInstance>(null);
   const [name, setName] = useState('');
@@ -24,35 +24,44 @@ export function RegisterScreen({ initialEmail, onBack, onLogIn }: RegisterScreen
   const [password, setPassword] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const [busy, setBusy] = useState<'email' | 'google' | null>(null);
-  const [error, setError] = useState<string | null>(null);
 
-  const nameError = submitted && !name.trim() ? 'Enter your name.' : null;
-  const emailError = submitted && !isValidEmail(email) ? 'Enter a valid email address.' : null;
-  const passwordError =
-    submitted && password.length < MIN_PASSWORD_LENGTH ? `Use at least ${MIN_PASSWORD_LENGTH} characters.` : null;
+  const nameInvalid = submitted && !name.trim();
+  const emailInvalid = submitted && !isValidEmail(email);
+  const passwordInvalid = submitted && password.length < MIN_PASSWORD_LENGTH;
 
   const submit = async () => {
     setSubmitted(true);
-    setError(null);
-    if (!name.trim() || !isValidEmail(email) || password.length < MIN_PASSWORD_LENGTH) return;
+    const problem = !name.trim()
+      ? 'Enter your name.'
+      : !isValidEmail(email)
+        ? 'Enter a valid email address.'
+        : password.length < MIN_PASSWORD_LENGTH
+          ? `Use a password with at least ${MIN_PASSWORD_LENGTH} characters.`
+          : null;
+    if (problem) {
+      toast.error(problem);
+      return;
+    }
 
     Keyboard.dismiss();
     setBusy('email');
     try {
       await register(name, email, password);
+      toast.success('Account created. Check your email to verify it.');
     } catch (caught) {
-      setError(authErrorMessage(caught));
+      toast.error(authErrorMessage(caught));
       setBusy(null);
     }
   };
 
   const continueWithGoogle = async () => {
-    setError(null);
     setBusy('google');
     try {
-      await signInWithGoogle();
+      if (await signInWithGoogle()) {
+        toast.success(welcomeMessage(auth.currentUser?.displayName));
+      }
     } catch (caught) {
-      setError(authErrorMessage(caught));
+      toast.error(authErrorMessage(caught));
     } finally {
       setBusy(null);
     }
@@ -75,7 +84,7 @@ export function RegisterScreen({ initialEmail, onBack, onLogIn }: RegisterScreen
         Icon={ProfileIcon}
         value={name}
         onChangeText={setName}
-        error={nameError}
+        invalid={nameInvalid}
         placeholder="Your name"
         autoCapitalize="words"
         autoComplete="name"
@@ -90,7 +99,7 @@ export function RegisterScreen({ initialEmail, onBack, onLogIn }: RegisterScreen
         Icon={MailIcon}
         value={email}
         onChangeText={setEmail}
-        error={emailError}
+        invalid={emailInvalid}
         placeholder="you@example.com"
         keyboardType="email-address"
         autoCapitalize="none"
@@ -109,7 +118,7 @@ export function RegisterScreen({ initialEmail, onBack, onLogIn }: RegisterScreen
         Icon={LockIcon}
         value={password}
         onChangeText={setPassword}
-        error={passwordError}
+        invalid={passwordInvalid}
         hint={`At least ${MIN_PASSWORD_LENGTH} characters.`}
         placeholder="Create a password"
         autoCapitalize="none"
@@ -122,7 +131,6 @@ export function RegisterScreen({ initialEmail, onBack, onLogIn }: RegisterScreen
         onSubmitEditing={submit}
       />
 
-      <FormError message={error} />
       <PrimaryButton label="Create account" onPress={submit} busy={busy === 'email'} />
 
      

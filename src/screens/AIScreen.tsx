@@ -19,15 +19,13 @@ export function AIScreen() {
   const insets = useSafeAreaInsets();
   const bottomNavInset = useBottomNavInset();
   const keyboardVisible = useKeyboardVisible();
-  const { messages, isResponding, conversationId, send, retry, stop, reset, openConversation } =
-    useSmartCoach();
+  const { messages, isResponding, conversationId, send, stop, reset, openConversation } = useSmartCoach();
   const [draft, setDraft] = useState('');
   const [composerHeight, setComposerHeight] = useState(0);
   const [historyVisible, setHistoryVisible] = useState(false);
 
   const isEmpty = messages.length === 0;
   const newestFirst = useMemo(() => [...messages].reverse(), [messages]);
-  const lastMessageId = messages.at(-1)?.id;
   const contentBottomInset = composerHeight + spacing.md;
 
   const sendDraft = () => {
@@ -100,7 +98,7 @@ export function AIScreen() {
               inverted
               keyExtractor={(message) => message.id}
               renderItem={({ item }) => (
-                <MessageBubble message={item} onRetry={item.id === lastMessageId ? retry : undefined} />
+                <MessageBubble message={item} />
               )}
               ListHeaderComponent={<View style={{ height: contentBottomInset }} />}
               ItemSeparatorComponent={() => <View style={{ height: spacing.sm + 2 }} />}

@@ -5,13 +5,10 @@ import { reviewWithCoach, type CoachReview } from '../../shield/coachReview';
 import type { MessageInput, ScamAssessment } from '../../shield/scamDetector';
 import { useTheme } from '../../theme/ThemeProvider';
 import { CoachAvatar } from '../coach/CoachAvatar';
+import { errorMessage, toast } from '../toast/toastStore';
 import { RiskBadge } from './RiskBadge';
 
-type ReviewState =
-  | { status: 'idle' }
-  | { status: 'loading' }
-  | { status: 'done'; review: CoachReview }
-  | { status: 'error'; message: string };
+type ReviewState = { status: 'idle' } | { status: 'loading' } | { status: 'done'; review: CoachReview };
 
 type ScamVerdictProps = {
   input: MessageInput;
@@ -28,7 +25,8 @@ export function ScamVerdict({ input, assessment }: ScamVerdictProps) {
     try {
       setReview({ status: 'done', review: await reviewWithCoach(input) });
     } catch (error) {
-      setReview({ status: 'error', message: error instanceof Error ? error.message : 'Please try again.' });
+      setReview({ status: 'idle' });
+      toast.error(errorMessage(error), { action: { label: 'Retry', onPress: () => void askCoach() } });
     }
   };
 
@@ -117,15 +115,9 @@ function CoachSecondOpinion({ state, onAsk }: { state: ReviewState; onAsk: () =>
           {state.status === 'loading' ? 'Smart Coach is checking…' : 'Ask Smart Coach'}
         </Text>
       </Pressable>
-      {state.status === 'error' ? (
-        <Text style={{ color: colors.secondary, fontFamily: typography.fontFamily.medium, fontSize: typography.fontSize.xs, textAlign: 'center' }}>
-          {state.message}
-        </Text>
-      ) : (
-        <Text style={{ color: colors.textMuted, fontFamily: typography.fontFamily.regular, fontSize: typography.fontSize.xs, textAlign: 'center' }}>
-          Sends this message to Smart Coach (Google Gemini) for a second opinion.
-        </Text>
-      )}
+      <Text style={{ color: colors.textMuted, fontFamily: typography.fontFamily.regular, fontSize: typography.fontSize.xs, textAlign: 'center' }}>
+        Sends this message to Smart Coach (Google Gemini) for a second opinion.
+      </Text>
     </View>
   );
 }

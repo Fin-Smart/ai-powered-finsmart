@@ -48,9 +48,6 @@ export async function reviewWithCoach(message: MessageInput): Promise<CoachRevie
     const result = await reviewModel.generateContent(prompt);
     return JSON.parse(result.response.text()) as CoachReview;
   } catch (error) {
-    if (__DEV__) {
-      console.warn('[Shield] coach review failed', error);
-    }
     throw new Error(getCoachErrorMessage(error));
   }
 }

@@ -91,26 +91,3 @@ export function TextLink({ prompt, label, onPress }: { prompt?: string; label: s
     </Text>
   );
 }
-
-export function FormError({ message }: { message: string | null }) {
-  const { colors, spacing, typography, radius } = useTheme().theme;
-  if (!message) return null;
-
-  return (
-    <Text
-      accessibilityLiveRegion="assertive"
-      accessibilityRole="alert"
-      style={{
-        backgroundColor: colors.secondaryMuted,
-        color: colors.secondary,
-        borderRadius: radius.md,
-        paddingVertical: spacing.sm + 2,
-        paddingHorizontal: spacing.md,
-        fontFamily: typography.fontFamily.medium,
-        fontSize: typography.fontSize.sm,
-        overflow: 'hidden',
-      }}>
-      {message}
-    </Text>
-  );
-}

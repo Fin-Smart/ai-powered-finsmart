@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Alert, KeyboardAvoidingView, Pressable, Text, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Pressable, Text, TextInput, View } from 'react-native';
 
 import FinsmartSms from '../../../modules/finsmart-sms';
 import { useTheme } from '../../theme/ThemeProvider';
 import { Sheet } from '../Sheet';
+import { errorMessage, toast } from '../toast/toastStore';
 
 type ComposeSheetProps = {
   draft: { address: string; body: string } | null;
@@ -31,10 +32,11 @@ export function ComposeSheet({ draft, onClose, onSent }: ComposeSheetProps) {
     setIsSending(true);
     try {
       const threadId = await FinsmartSms.sendSms(address.trim(), body.trim());
+      toast.success('Message sent');
       if (threadId) onSent({ threadId, address: address.trim() });
       else onClose();
     } catch (error) {
-      Alert.alert('Message not sent', error instanceof Error ? error.message : 'Please try again.');
+      toast.error(errorMessage(error, 'Message not sent. Please try again.'));
     } finally {
       setIsSending(false);
     }

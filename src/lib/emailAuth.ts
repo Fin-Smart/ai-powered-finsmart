@@ -15,7 +15,14 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 export const isValidEmail = (email: string) => EMAIL_PATTERN.test(email.trim());
 
 export async function logIn(email: string, password: string) {
-  await signInWithEmailAndPassword(auth, email.trim(), password);
+  const { user } = await signInWithEmailAndPassword(auth, email.trim(), password);
+  return user;
+}
+
+/** Greeting shown after a successful sign-in. */
+export function welcomeMessage(displayName?: string | null) {
+  const firstName = displayName?.trim().split(/\s+/)[0];
+  return firstName ? `Welcome back, ${firstName}` : 'Welcome back';
 }
 
 export async function register(name: string, email: string, password: string) {

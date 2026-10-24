@@ -1,29 +1,22 @@
 import { useEffect, useRef } from 'react';
-import { Animated, Pressable, Text, View } from 'react-native';
+import { Animated, View } from 'react-native';
 
 import type { CoachMessage } from '../../coach/useSmartCoach';
 import { useTheme } from '../../theme/ThemeProvider';
-import { RefreshIcon } from '../icons';
 import { CoachAvatar } from './CoachAvatar';
 import { CoachText } from './CoachText';
 
 const AVATAR_SIZE = 28;
 
-type MessageBubbleProps = {
-  message: CoachMessage;
-  onRetry?: () => void;
-};
-
-export function MessageBubble({ message, onRetry }: MessageBubbleProps) {
-  const { colors, spacing, typography } = useTheme().theme;
+export function MessageBubble({ message }: { message: CoachMessage }) {
+  const { colors, spacing } = useTheme().theme;
   const isUser = message.role === 'user';
-  const isError = message.status === 'error';
 
   const bubble = (
     <View
       style={{
         flexShrink: 1,
-        backgroundColor: isUser ? colors.primary : isError ? colors.secondaryMuted : colors.surface,
+        backgroundColor: isUser ? colors.primary : colors.surface,
         borderRadius: 22,
         paddingHorizontal: spacing.md,
         paddingVertical: spacing.sm + 2,
@@ -41,35 +34,9 @@ export function MessageBubble({ message, onRetry }: MessageBubbleProps) {
   }
 
   return (
-    <View style={{ paddingRight: spacing.xl, gap: spacing.xs }}>
-      <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: spacing.sm }}>
-        <CoachAvatar size={AVATAR_SIZE} />
-        {bubble}
-      </View>
-
-      {isError && onRetry ? (
-        <Pressable
-          accessibilityRole="button"
-          onPress={onRetry}
-          hitSlop={8}
-          style={({ pressed }) => ({
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: spacing.xs,
-            marginLeft: AVATAR_SIZE + spacing.sm + spacing.xs,
-            opacity: pressed ? 0.6 : 1,
-          })}>
-          <RefreshIcon size={15} color={colors.secondary} />
-          <Text
-            style={{
-              color: colors.secondary,
-              fontFamily: typography.fontFamily.semiBold,
-              fontSize: typography.fontSize.xs,
-            }}>
-            Tap to retry
-          </Text>
-        </Pressable>
-      ) : null}
+    <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: spacing.sm, paddingRight: spacing.xl }}>
+      <CoachAvatar size={AVATAR_SIZE} />
+      {bubble}
     </View>
   );
 }
