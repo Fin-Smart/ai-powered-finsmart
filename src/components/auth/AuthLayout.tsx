@@ -90,7 +90,7 @@ export function AuthLayout({ title, subtitle, compact, onBack, footer, children 
                 onPress={onBack}
                 hitSlop={8}
                 style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-                <BackIcon size={22} color={isLiquidGlassEnabled ? colors.onPrimary : colors.text} strokeWidth={2} />
+                <BackIcon size={22} color={isLiquidGlassEnabled ? colors.textSecondary : colors.text} strokeWidth={2} />
               </Pressable>
             </GlassSurface>
           ) : null}
