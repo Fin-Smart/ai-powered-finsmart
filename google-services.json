@@ -12,7 +12,20 @@
           "package_name": "com.fintitans.finsmart"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "859583162171-hofvitomqu61bls493lj5d4fsbp32coi.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.fintitans.finsmart",
+            "certificate_hash": "07720bed3934d1cd0ed375d2f0f7f7bb29e58533"
+          }
+        },
+        {
+          "client_id": "859583162171-feitemqut2j2ifcavnmddaqnvbifcuqk.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyAuIp6fW2RchUJhU7-e9uWB1s9veiruJzc"
@@ -20,7 +33,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "859583162171-feitemqut2j2ifcavnmddaqnvbifcuqk.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "859583162171-43aciav8bveopqdsv6c4qa48qtua7nip.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.fintitans.finsmart"
+              }
+            }
+          ]
         }
       }
     }
