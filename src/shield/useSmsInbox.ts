@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState, PermissionsAndroid, Platform } from 'react-native';
 
 import FinsmartSms, { type SmsConversation } from '../../modules/finsmart-sms';
 import { errorMessage, toast } from '../components/toast/toastStore';
 
-const SCAN_LIMIT = 1500;
+/** Conversations are built from the most recent N texts; older threads appear as N grows. */
+const INITIAL_SCAN_LIMIT = 1500;
 
 /** Android 9 and below grant SMS permissions at runtime even to the default SMS app. */
 async function requestRuntimePermissions() {
@@ -28,6 +29,9 @@ export function useSmsInbox() {
   const [conversations, setConversations] = useState<SmsConversation[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isRequesting, setIsRequesting] = useState(false);
+  const [isLoadingOlder, setIsLoadingOlder] = useState(false);
+  const [canLoadOlder, setCanLoadOlder] = useState(true);
+  const scanLimitRef = useRef(INITIAL_SCAN_LIMIT);
 
   const refresh = useCallback(async () => {
     if (!FinsmartSms) return;
@@ -40,13 +44,30 @@ export function useSmsInbox() {
 
     setIsLoading(true);
     try {
-      setConversations(await FinsmartSms.getConversations(SCAN_LIMIT));
+      setConversations(await FinsmartSms.getConversations(scanLimitRef.current));
     } catch (error) {
       toast.error(errorMessage(error, "Couldn't load your texts. Please try again."));
     } finally {
       setIsLoading(false);
     }
   }, []);
+
+  /** Scans further back for older conversations; stops offering once nothing new turns up. */
+  const loadOlder = useCallback(async () => {
+    if (!FinsmartSms || isLoadingOlder) return;
+    setIsLoadingOlder(true);
+    try {
+      const previousCount = conversations.length;
+      scanLimitRef.current *= 2;
+      const loaded = await FinsmartSms.getConversations(scanLimitRef.current);
+      setConversations(loaded);
+      if (loaded.length <= previousCount) setCanLoadOlder(false);
+    } catch (error) {
+      toast.error(errorMessage(error, "Couldn't load older texts. Please try again."));
+    } finally {
+      setIsLoadingOlder(false);
+    }
+  }, [conversations.length, isLoadingOlder]);
 
   useEffect(() => {
     if (!FinsmartSms) return;
@@ -90,7 +111,10 @@ export function useSmsInbox() {
     conversations,
     isLoading,
     isRequesting,
+    isLoadingOlder,
+    canLoadOlder,
     refresh,
+    loadOlder,
     becomeDefault,
   };
 }

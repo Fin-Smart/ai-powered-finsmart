@@ -13,7 +13,13 @@ import {
   restoreGoogleSession,
   signInWithGoogle,
 } from '../lib/googleAuth';
-import { fetchRecentEmails, GmailApiDisabledError, GmailAuthError, type GmailMessage } from './gmail';
+import {
+  fetchEmailPage,
+  GmailApiDisabledError,
+  GmailAuthError,
+  type EmailPage,
+  type GmailMessage,
+} from './gmail';
 
 export type GmailStatus = 'unavailable' | 'signedOut' | 'needsAccess' | 'paused' | 'loading' | 'ready' | 'error';
 
@@ -24,6 +30,8 @@ export function useGmailScan() {
   const [status, setStatus] = useState<GmailStatus>(isGoogleSignInAvailable ? 'signedOut' : 'unavailable');
   const [emails, setEmails] = useState<GmailMessage[]>([]);
   const [isConnecting, setIsConnecting] = useState(false);
+  const [nextPageToken, setNextPageToken] = useState<string | null>(null);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [enabled, setEnabledState] = useState(true);
   const [preferenceLoaded, setPreferenceLoaded] = useState(false);
   const enabledRef = useRef(true);
@@ -44,11 +52,13 @@ export function useGmailScan() {
     if (!auth.currentUser) {
       setStatus('signedOut');
       setEmails([]);
+      setNextPageToken(null);
       return false;
     }
     if (!enabledRef.current) {
       setStatus('paused');
       setEmails([]);
+      setNextPageToken(null);
       return false;
     }
 
@@ -60,18 +70,19 @@ export function useGmailScan() {
 
     setStatus('loading');
     try {
-      let loaded: GmailMessage[];
+      let page: EmailPage;
       try {
-        loaded = await fetchRecentEmails(await getGoogleAccessToken(freshToken));
+        page = await fetchEmailPage(await getGoogleAccessToken(freshToken));
       } catch (error) {
         // A cached token can predate the Gmail grant; retry once with a newly minted one.
         if (!(error instanceof GmailAuthError) || freshToken) throw error;
-        loaded = await fetchRecentEmails(await getGoogleAccessToken(true));
+        page = await fetchEmailPage(await getGoogleAccessToken(true));
       }
 
       // Checks may have been switched off while the request was in flight.
       if (!enabledRef.current) return false;
-      setEmails(loaded);
+      setEmails(page.emails);
+      setNextPageToken(page.nextPageToken);
       setStatus('ready');
       return true;
     } catch (error) {
@@ -94,6 +105,24 @@ export function useGmailScan() {
     if (preferenceLoaded) void refresh();
   }, [user, refresh, preferenceLoaded]);
 
+  const loadMore = useCallback(async () => {
+    if (!nextPageToken || isLoadingMore || !enabledRef.current) return;
+    setIsLoadingMore(true);
+    try {
+      const page = await fetchEmailPage(await getGoogleAccessToken(), nextPageToken);
+      if (!enabledRef.current) return;
+      setEmails((current) => {
+        const known = new Set(current.map((email) => email.id));
+        return [...current, ...page.emails.filter((email) => !known.has(email.id))];
+      });
+      setNextPageToken(page.nextPageToken);
+    } catch (error) {
+      toast.error(errorMessage(error, "Couldn't load more emails. Please try again."));
+    } finally {
+      setIsLoadingMore(false);
+    }
+  }, [isLoadingMore, nextPageToken]);
+
   const setEnabled = useCallback(
     async (value: boolean) => {
       enabledRef.current = value;
@@ -105,6 +134,7 @@ export function useGmailScan() {
       if (!value) {
         setStatus('paused');
         setEmails([]);
+        setNextPageToken(null);
         toast.info('Gmail checks are off. Shield will not read your emails.');
         return;
       }
@@ -135,5 +165,17 @@ export function useGmailScan() {
     }
   }, [refresh]);
 
-  return { status, emails, enabled, isConnecting, isSignedIn: user !== null, setEnabled, connect, refresh };
+  return {
+    status,
+    emails,
+    enabled,
+    isConnecting,
+    isSignedIn: user !== null,
+    hasMore: nextPageToken !== null,
+    isLoadingMore,
+    setEnabled,
+    connect,
+    refresh,
+    loadMore,
+  };
 }

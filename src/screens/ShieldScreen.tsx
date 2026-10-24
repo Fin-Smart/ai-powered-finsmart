@@ -153,7 +153,7 @@ export function ShieldScreen() {
 
             {visibleEmails.length === 0 ? (
               <Text style={emptyText}>
-                {emailFilter === 'flagged' ? 'No flagged emails in the last 14 days.' : 'No emails in the last 14 days.'}
+                {emailFilter === 'flagged' ? 'No flagged emails in what has loaded so far.' : 'Your inbox is empty.'}
               </Text>
             ) : (
               visibleEmails.map(({ email, assessment }) => (
@@ -169,6 +169,7 @@ export function ShieldScreen() {
                 />
               ))
             )}
+            {gmail.hasMore ? <LoadMoreButton loading={gmail.isLoadingMore} onPress={() => void gmail.loadMore()} /> : null}
           </>
         ) : null}
 
@@ -233,12 +234,14 @@ export function ShieldScreen() {
                 />
               ))
             )}
-            {visibleTexts.length > smsLimit ? (
-              <Pressable accessibilityRole="button" onPress={() => setSmsLimit((limit) => limit + PAGE_SIZE)} style={{ paddingVertical: spacing.sm }}>
-                <Text style={{ color: colors.primary, fontFamily: typography.fontFamily.semiBold, fontSize: typography.fontSize.sm }}>
-                  Show more
-                </Text>
-              </Pressable>
+            {visibleTexts.length > smsLimit || sms.canLoadOlder ? (
+              <LoadMoreButton
+                loading={sms.isLoadingOlder}
+                onPress={() => {
+                  if (visibleTexts.length <= smsLimit) void sms.loadOlder();
+                  setSmsLimit((limit) => limit + PAGE_SIZE);
+                }}
+              />
             ) : null}
           </>
         ) : null}
@@ -323,6 +326,35 @@ function TabSwitcher({ value, onChange, options }: TabSwitcherProps) {
         );
       })}
     </View>
+  );
+}
+
+function LoadMoreButton({ loading, onPress }: { loading: boolean; onPress: () => void }) {
+  const { colors, spacing, typography } = useTheme().theme;
+
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityState={{ busy: loading, disabled: loading }}
+      disabled={loading}
+      onPress={onPress}
+      style={({ pressed }) => ({
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: spacing.sm,
+        marginTop: spacing.sm,
+        paddingVertical: spacing.sm + 4,
+        borderRadius: 999,
+        borderWidth: 1,
+        borderColor: colors.border,
+        opacity: pressed ? 0.7 : 1,
+      })}>
+      {loading ? <ActivityIndicator size="small" color={colors.text} /> : null}
+      <Text style={{ color: colors.text, fontFamily: typography.fontFamily.semiBold, fontSize: typography.fontSize.sm }}>
+        {loading ? 'Loading…' : 'Load more'}
+      </Text>
+    </Pressable>
   );
 }
 

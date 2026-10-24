@@ -18,17 +18,6 @@ type ScamVerdictProps = {
 /** Risk badge, the reasons behind it and an optional Smart Coach second opinion. */
 export function ScamVerdict({ input, assessment }: ScamVerdictProps) {
   const { colors, spacing, typography } = useTheme().theme;
-  const [review, setReview] = useState<ReviewState>({ status: 'idle' });
-
-  const askCoach = async () => {
-    setReview({ status: 'loading' });
-    try {
-      setReview({ status: 'done', review: await reviewWithCoach(input) });
-    } catch (error) {
-      setReview({ status: 'idle' });
-      toast.error(errorMessage(error), { action: { label: 'Retry', onPress: () => void askCoach() } });
-    }
-  };
 
   return (
     <View style={{ gap: spacing.sm + 2 }}>
@@ -41,7 +30,7 @@ export function ScamVerdict({ input, assessment }: ScamVerdictProps) {
         </Text>
       )}
 
-      <CoachSecondOpinion state={review} onAsk={askCoach} />
+      <CoachSecondOpinion input={input} />
     </View>
   );
 }
@@ -65,8 +54,20 @@ export function Bullet({ text }: { text: string }) {
   );
 }
 
-function CoachSecondOpinion({ state, onAsk }: { state: ReviewState; onAsk: () => void }) {
+/** "Ask Smart Coach" button that turns into the coach's verdict once it answers. */
+export function CoachSecondOpinion({ input }: { input: MessageInput }) {
   const { colors, spacing, typography, radius } = useTheme().theme;
+  const [state, setState] = useState<ReviewState>({ status: 'idle' });
+
+  const ask = async () => {
+    setState({ status: 'loading' });
+    try {
+      setState({ status: 'done', review: await reviewWithCoach(input) });
+    } catch (error) {
+      setState({ status: 'idle' });
+      toast.error(errorMessage(error), { action: { label: 'Retry', onPress: () => void ask() } });
+    }
+  };
 
   if (state.status === 'done') {
     return (
@@ -89,35 +90,27 @@ function CoachSecondOpinion({ state, onAsk }: { state: ReviewState; onAsk: () =>
   }
 
   return (
-    <View style={{ gap: spacing.xs }}>
-      <Pressable
-        accessibilityRole="button"
-        disabled={state.status === 'loading'}
-        onPress={onAsk}
-        style={({ pressed }) => ({
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: spacing.sm,
-          paddingVertical: spacing.sm + 4,
-          borderRadius: 999,
-          borderWidth: 1,
-          borderColor: colors.border,
-          backgroundColor: colors.background,
-          opacity: pressed ? 0.7 : 1,
-        })}>
-        {state.status === 'loading' ? (
-          <ActivityIndicator size="small" color={colors.text} />
-        ) : (
-          <CoachAvatar size={24} />
-        )}
-        <Text style={{ color: colors.text, fontFamily: typography.fontFamily.semiBold, fontSize: typography.fontSize.sm }}>
-          {state.status === 'loading' ? 'Smart Coach is checking…' : 'Ask Smart Coach'}
-        </Text>
-      </Pressable>
-      <Text style={{ color: colors.textMuted, fontFamily: typography.fontFamily.regular, fontSize: typography.fontSize.xs, textAlign: 'center' }}>
-        Sends this message to Smart Coach (Google Gemini) for a second opinion.
+    <Pressable
+      accessibilityRole="button"
+      accessibilityState={{ busy: state.status === 'loading' }}
+      disabled={state.status === 'loading'}
+      onPress={ask}
+      style={({ pressed }) => ({
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: spacing.sm,
+        paddingVertical: spacing.sm + 4,
+        borderRadius: 999,
+        borderWidth: 1,
+        borderColor: colors.border,
+        backgroundColor: colors.background,
+        opacity: pressed ? 0.7 : 1,
+      })}>
+      {state.status === 'loading' ? <ActivityIndicator size="small" color={colors.text} /> : <CoachAvatar size={24} />}
+      <Text style={{ color: colors.text, fontFamily: typography.fontFamily.semiBold, fontSize: typography.fontSize.sm }}>
+        {state.status === 'loading' ? 'Smart Coach is checking…' : 'Ask Smart Coach'}
       </Text>
-    </View>
+    </Pressable>
   );
 }

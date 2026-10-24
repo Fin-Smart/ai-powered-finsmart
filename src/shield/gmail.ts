@@ -117,32 +117,42 @@ function parseFrom(from: string) {
 }
 
 /** Recent inbox emails (newest first), fetched read-only with the signed-in user's token. */
-export async function fetchRecentEmails(accessToken: string, maxResults = 25): Promise<GmailMessage[]> {
-  const list = await gmailFetch<{ messages?: { id: string }[] }>(
+export const EMAIL_PAGE_SIZE = 20;
+
+export type EmailPage = { emails: GmailMessage[]; nextPageToken: string | null };
+
+/** One page of the inbox, newest first. Pass the previous page's `nextPageToken` to continue. */
+export async function fetchEmailPage(accessToken: string, pageToken?: string | null): Promise<EmailPage> {
+  const params = new URLSearchParams({ maxResults: String(EMAIL_PAGE_SIZE), q: 'in:inbox' });
+  if (pageToken) params.set('pageToken', pageToken);
+
+  const list = await gmailFetch<{ messages?: { id: string }[]; nextPageToken?: string }>(
     accessToken,
-    `/messages?maxResults=${maxResults}&q=${encodeURIComponent('in:inbox newer_than:14d')}`,
+    `/messages?${params.toString()}`,
   );
 
   const messages = await Promise.all(
     (list.messages ?? []).map(({ id }) => gmailFetch<GmailApiMessage>(accessToken, `/messages/${id}?format=full`)),
   );
 
-  return messages.map((message) => {
-    const header = (name: string) =>
-      message.payload?.headers?.find((item) => item.name.toLowerCase() === name)?.value ?? '';
-    const from = header('from');
-    const { name, address } = parseFrom(from);
+  return { emails: messages.map(toGmailMessage), nextPageToken: list.nextPageToken ?? null };
+}
 
-    return {
-      id: message.id,
-      from,
-      fromName: name,
-      fromAddress: address,
-      subject: header('subject') || '(no subject)',
-      date: Number(message.internalDate ?? Date.now()),
-      snippet: message.snippet ?? '',
-      body: extractBody(message.payload).slice(0, MAX_BODY_LENGTH),
-      unread: message.labelIds?.includes('UNREAD') ?? false,
-    };
-  });
+function toGmailMessage(message: GmailApiMessage): GmailMessage {
+  const header = (name: string) =>
+    message.payload?.headers?.find((item) => item.name.toLowerCase() === name)?.value ?? '';
+  const from = header('from');
+  const { name, address } = parseFrom(from);
+
+  return {
+    id: message.id,
+    from,
+    fromName: name,
+    fromAddress: address,
+    subject: header('subject') || '(no subject)',
+    date: Number(message.internalDate ?? Date.now()),
+    snippet: message.snippet ?? '',
+    body: extractBody(message.payload).slice(0, MAX_BODY_LENGTH),
+    unread: message.labelIds?.includes('UNREAD') ?? false,
+  };
 }

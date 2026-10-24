@@ -1,4 +1,4 @@
-import { AIError, getGenerativeModel, type Content } from '@react-native-firebase/ai';
+import { AIError, getGenerativeModel, ThinkingLevel, type Content } from '@react-native-firebase/ai';
 
 import { ai } from '../lib/ai';
 
@@ -27,6 +27,8 @@ Formatting:
 const coachModel = getGenerativeModel(ai, {
   model: COACH_MODEL,
   systemInstruction: SYSTEM_INSTRUCTION,
+  // Beginner money questions don't need deep reasoning; low thinking starts the reply sooner.
+  generationConfig: { thinkingConfig: { thinkingLevel: ThinkingLevel.LOW } },
 });
 
 export function startCoachChat(history: Content[] = []) {
