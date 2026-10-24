@@ -7,6 +7,7 @@ import Refresh01Icon from '@hugeicons/core-free-icons/Refresh01Icon';
 import SendIcon from '@hugeicons/core-free-icons/SendIcon';
 import HugeStopIcon from '@hugeicons/core-free-icons/StopIcon';
 import UserIcon from '@hugeicons/core-free-icons/UserIcon';
+import WorkHistoryIcon from '@hugeicons/core-free-icons/WorkHistoryIcon';
 import { HugeiconsIcon, type IconSvgElement } from '@hugeicons/react-native';
 
 export type IconProps = {
@@ -42,3 +43,4 @@ export const MicIcon = createIcon(Mic01Icon);
 export const StopIcon = createIcon(HugeStopIcon);
 export const ComposeIcon = createIcon(PencilEdit02Icon);
 export const RefreshIcon = createIcon(Refresh01Icon);
+export const HistoryIcon = createIcon(WorkHistoryIcon);

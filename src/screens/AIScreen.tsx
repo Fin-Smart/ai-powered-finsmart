@@ -7,9 +7,10 @@ import { useBottomNavInset } from '../components/BottomNav';
 import { CoachAvatar } from '../components/coach/CoachAvatar';
 import { CoachIntro } from '../components/coach/CoachIntro';
 import { Composer } from '../components/coach/Composer';
+import { HistorySheet } from '../components/coach/HistorySheet';
 import { MessageBubble } from '../components/coach/MessageBubble';
 import { QuickReplies } from '../components/coach/QuickReplies';
-import { ComposeIcon } from '../components/icons';
+import { ComposeIcon, HistoryIcon } from '../components/icons';
 import { useKeyboardVisible } from '../hooks/useKeyboardVisible';
 import { useTheme } from '../theme/ThemeProvider';
 
@@ -18,9 +19,11 @@ export function AIScreen() {
   const insets = useSafeAreaInsets();
   const bottomNavInset = useBottomNavInset();
   const keyboardVisible = useKeyboardVisible();
-  const { messages, isResponding, send, retry, stop, reset } = useSmartCoach();
+  const { messages, isResponding, conversationId, send, retry, stop, reset, openConversation } =
+    useSmartCoach();
   const [draft, setDraft] = useState('');
   const [composerHeight, setComposerHeight] = useState(0);
+  const [historyVisible, setHistoryVisible] = useState(false);
 
   const isEmpty = messages.length === 0;
   const newestFirst = useMemo(() => [...messages].reverse(), [messages]);
@@ -66,6 +69,15 @@ export function AIScreen() {
               {isResponding ? 'typing…' : 'Money coach'}
             </Text>
           </View>
+
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Chat history"
+            onPress={() => setHistoryVisible(true)}
+            hitSlop={10}
+            style={({ pressed }) => ({ padding: spacing.xs, opacity: pressed ? 0.5 : 1 })}>
+            <HistoryIcon size={25} color={colors.text} />
+          </Pressable>
 
           {isEmpty ? null : (
             <Pressable
@@ -120,6 +132,22 @@ export function AIScreen() {
           </View>
         </View>
       </KeyboardAvoidingView>
+
+      <HistorySheet
+        visible={historyVisible}
+        activeConversationId={conversationId}
+        onClose={() => setHistoryVisible(false)}
+        onSelect={(conversation) => {
+          openConversation(conversation);
+          setDraft('');
+          setHistoryVisible(false);
+        }}
+        onDeleted={(id) => {
+          if (id === conversationId) {
+            reset();
+          }
+        }}
+      />
     </View>
   );
 }

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "859583162171",
+    "project_id": "finsmart-ad99c",
+    "storage_bucket": "finsmart-ad99c.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:859583162171:android:e0485b7a2485a0c874f91e",
+        "android_client_info": {
+          "package_name": "com.fintitans.finsmart"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAuIp6fW2RchUJhU7-e9uWB1s9veiruJzc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

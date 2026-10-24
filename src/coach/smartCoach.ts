@@ -1,4 +1,4 @@
-import { AIError, AIErrorCode, getGenerativeModel } from 'firebase/ai';
+import { AIError, AIErrorCode, getGenerativeModel, type Content } from 'firebase/ai';
 
 import { ai } from '../lib/ai';
 
@@ -29,8 +29,8 @@ const coachModel = getGenerativeModel(ai, {
   systemInstruction: SYSTEM_INSTRUCTION,
 });
 
-export function startCoachChat() {
-  return coachModel.startChat();
+export function startCoachChat(history: Content[] = []) {
+  return coachModel.startChat({ history });
 }
 
 export const COACH_SUGGESTIONS = [
