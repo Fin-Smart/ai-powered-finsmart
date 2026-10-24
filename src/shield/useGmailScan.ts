@@ -13,6 +13,7 @@ import {
   restoreGoogleSession,
   signInWithGoogle,
 } from '../lib/googleAuth';
+import { clearEmailCache, readEmailCache, writeEmailCache } from './emailCache';
 import {
   fetchEmailPage,
   GmailApiDisabledError,
@@ -84,6 +85,7 @@ export function useGmailScan() {
       setEmails(page.emails);
       setNextPageToken(page.nextPageToken);
       setStatus('ready');
+      if (auth.currentUser) void writeEmailCache(auth.currentUser.uid, page);
       return true;
     } catch (error) {
       if (!enabledRef.current) return false;
@@ -101,9 +103,29 @@ export function useGmailScan() {
     }
   }, []);
 
+  // Show the last synced inbox straight away, then refresh it in the background.
   useEffect(() => {
-    if (preferenceLoaded) void refresh();
-  }, [user, refresh, preferenceLoaded]);
+    if (!preferenceLoaded) return;
+    let cancelled = false;
+    const uid = user?.uid;
+
+    (async () => {
+      if (uid && enabledRef.current && isGoogleSignInAvailable) {
+        const cached = await readEmailCache(uid);
+        if (cancelled) return;
+        if (cached?.emails.length) {
+          setEmails(cached.emails);
+          setNextPageToken(cached.nextPageToken);
+          setStatus('loading');
+        }
+      }
+      if (!cancelled) void refresh();
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.uid, refresh, preferenceLoaded]);
 
   const loadMore = useCallback(async () => {
     if (!nextPageToken || isLoadingMore || !enabledRef.current) return;
@@ -135,6 +157,7 @@ export function useGmailScan() {
         setStatus('paused');
         setEmails([]);
         setNextPageToken(null);
+        void clearEmailCache();
         toast.info('Gmail checks are off. Shield will not read your emails.');
         return;
       }

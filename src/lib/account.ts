@@ -3,6 +3,7 @@ import { deleteUser, sendEmailVerification, sendPasswordResetEmail, type User } 
 
 import { deleteUserData } from '../budget/budgetRepo';
 import { clearConversations } from '../coach/chatHistory';
+import { clearEmailCache } from '../shield/emailCache';
 import { auth } from './firebase';
 import { reauthenticateWithGoogle, revokeGoogleAccess, signOutEverywhere } from './googleAuth';
 
@@ -52,6 +53,7 @@ export async function deleteAccount(): Promise<boolean> {
 
   await deleteUserData(user.uid);
   await clearConversations();
+  await clearEmailCache();
   await AsyncStorage.multiRemove(['shield:gmail-enabled', 'settings:currency']).catch(() => undefined);
   await revokeGoogleAccess();
 

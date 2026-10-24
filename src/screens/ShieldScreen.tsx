@@ -6,6 +6,7 @@ import { Screen } from '../components/Screen';
 import { ComposeSheet } from '../components/shield/ComposeSheet';
 import { EmailSheet } from '../components/shield/EmailSheet';
 import { InboxRow } from '../components/shield/InboxRow';
+import { InboxSkeleton } from '../components/shield/InboxSkeleton';
 import { MessageChecker } from '../components/shield/MessageChecker';
 import { SourceCard } from '../components/shield/SourceCard';
 import { ThreadSheet } from '../components/shield/ThreadSheet';
@@ -77,7 +78,11 @@ export function ShieldScreen() {
     emailFilter === 'all' ? assessedEmails : assessedEmails.filter((item) => isFlagged(item.assessment));
 
   const showTexts = Platform.OS === 'android' && sms.isDefault;
-  const showEmails = gmail.status === 'ready' || (gmail.status === 'loading' && gmail.emails.length > 0);
+  const hasEmails = gmail.emails.length > 0;
+  // Saved emails stay visible while refreshing and when a refresh fails (for example offline).
+  const showEmails = gmail.status === 'ready' || ((gmail.status === 'loading' || gmail.status === 'error') && hasEmails);
+  const firstEmailLoad = gmail.status === 'loading' && !hasEmails;
+  const firstSmsLoad = sms.isLoading && sms.conversations.length === 0;
 
   const sectionTitle = {
     marginTop: spacing.lg,
@@ -141,13 +146,22 @@ export function ShieldScreen() {
           />
         </View>
 
+        {firstEmailLoad ? (
+          <>
+            <Text accessibilityRole="header" style={sectionTitle}>
+              Inbox
+            </Text>
+            <InboxSkeleton label="Loading your emails" />
+          </>
+        ) : null}
+
         {showEmails ? (
           <>
             <View style={{ flexDirection: 'row', alignItems: 'center', ...sectionTitle }}>
               <Text accessibilityRole="header" style={{ flex: 1, color: colors.text, fontFamily: typography.fontFamily.semiBold, fontSize: typography.fontSize.lg }}>
                 Inbox
               </Text>
-              {gmail.status === 'loading' ? <ActivityIndicator size="small" color={colors.textMuted} /> : null}
+              {gmail.status === 'loading' ? <SyncIndicator label="Updating" /> : null}
             </View>
             <FilterPills value={emailFilter} onChange={setEmailFilter} flagged={flaggedEmails} />
 
@@ -207,7 +221,7 @@ export function ShieldScreen() {
               <Text accessibilityRole="header" style={{ flex: 1, color: colors.text, fontFamily: typography.fontFamily.semiBold, fontSize: typography.fontSize.lg }}>
                 Messages
               </Text>
-              {sms.isLoading ? <ActivityIndicator size="small" color={colors.textMuted} /> : null}
+              {sms.isLoading && !firstSmsLoad ? <SyncIndicator label="Updating" /> : null}
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel="New message"
@@ -219,7 +233,9 @@ export function ShieldScreen() {
             </View>
             <FilterPills value={smsFilter} onChange={setSmsFilter} flagged={flaggedTexts} />
 
-            {visibleTexts.length === 0 ? (
+            {firstSmsLoad ? (
+              <InboxSkeleton label="Loading your texts" />
+            ) : visibleTexts.length === 0 ? (
               <Text style={emptyText}>{smsFilter === 'flagged' ? 'No flagged texts.' : 'No texts yet.'}</Text>
             ) : (
               visibleTexts.slice(0, smsLimit).map(({ conversation, assessment }) => (
@@ -325,6 +341,18 @@ function TabSwitcher({ value, onChange, options }: TabSwitcherProps) {
           </Pressable>
         );
       })}
+    </View>
+  );
+}
+
+function SyncIndicator({ label }: { label: string }) {
+  const { colors, spacing, typography } = useTheme().theme;
+  return (
+    <View accessible accessibilityLabel={label} style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs + 2 }}>
+      <ActivityIndicator size="small" color={colors.textMuted} />
+      <Text style={{ color: colors.textMuted, fontFamily: typography.fontFamily.medium, fontSize: typography.fontSize.xs }}>
+        {label}
+      </Text>
     </View>
   );
 }

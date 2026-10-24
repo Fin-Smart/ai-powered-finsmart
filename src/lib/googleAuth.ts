@@ -6,6 +6,7 @@ import {
 } from '@react-native-firebase/auth';
 import { TurboModuleRegistry } from 'react-native';
 
+import { clearEmailCache } from '../shield/emailCache';
 import { auth } from './firebase';
 
 type GoogleSignInPackage = typeof import('@react-native-google-signin/google-signin');
@@ -50,6 +51,7 @@ export async function signInWithGoogle(): Promise<boolean> {
 }
 
 export async function signOutEverywhere() {
+  await clearEmailCache();
   if (google) {
     await google.GoogleSignin.signOut().catch(() => undefined);
   }
