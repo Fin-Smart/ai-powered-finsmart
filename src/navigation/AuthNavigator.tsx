@@ -8,8 +8,8 @@ import { RegisterScreen } from '../screens/auth/RegisterScreen';
 
 type AuthRoute = 'login' | 'register' | 'forgot';
 
-export function AuthNavigator() {
-  const [route, setRoute] = useState<AuthRoute>('login');
+export function AuthNavigator({ initialRoute = 'login' }: { initialRoute?: 'login' | 'register' }) {
+  const [route, setRoute] = useState<AuthRoute>(initialRoute);
   const [email, setEmail] = useState('');
 
   const go = (next: AuthRoute, typedEmail: string) => {

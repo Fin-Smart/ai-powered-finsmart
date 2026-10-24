@@ -1,7 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-/** Kept across sign-outs: a preference about this phone, not about the account. */
-const DEVICE_KEYS = new Set(['settings:theme']);
+import { ONBOARDING_KEY } from './onboarding';
+
+/** Kept across sign-outs: about this phone, not about the account. */
+const DEVICE_KEYS = new Set(['settings:theme', ONBOARDING_KEY]);
 
 const resetters = new Set<() => void>();
 

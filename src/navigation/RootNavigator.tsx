@@ -1,22 +1,41 @@
-import * as SplashScreen from 'expo-splash-screen';
-import { useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
+import { AnimatedSplash } from '../components/AnimatedSplash';
 import { useAuthState } from '../hooks/useAuthUser';
+import { hasSeenOnboarding, markOnboardingSeen } from '../lib/onboarding';
+import { OnboardingScreen, type OnboardingExit } from '../screens/OnboardingScreen';
 import { AuthNavigator } from './AuthNavigator';
 import { TabNavigator } from './TabNavigator';
 
 export function RootNavigator() {
   const { user, initializing } = useAuthState();
+  const [onboarded, setOnboarded] = useState<boolean | null>(null);
+  const [authRoute, setAuthRoute] = useState<OnboardingExit>('login');
+  const [splashVisible, setSplashVisible] = useState(true);
 
   useEffect(() => {
-    if (!initializing) {
-      void SplashScreen.hideAsync();
-    }
-  }, [initializing]);
+    void hasSeenOnboarding().then(setOnboarded);
+  }, []);
 
-  if (initializing) {
-    return null;
-  }
+  const finishOnboarding = (next: OnboardingExit) => {
+    setAuthRoute(next);
+    setOnboarded(true);
+    void markOnboardingSeen();
+  };
 
-  return user ? <TabNavigator /> : <AuthNavigator />;
+  const hideSplash = useCallback(() => setSplashVisible(false), []);
+  const ready = !initializing && onboarded !== null;
+
+  return (
+    <>
+      {!ready ? null : user ? (
+        <TabNavigator />
+      ) : onboarded ? (
+        <AuthNavigator initialRoute={authRoute} />
+      ) : (
+        <OnboardingScreen onDone={finishOnboarding} />
+      )}
+      {splashVisible ? <AnimatedSplash ready={ready} onFinish={hideSplash} /> : null}
+    </>
+  );
 }
