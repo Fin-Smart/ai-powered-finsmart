@@ -122,7 +122,6 @@ export default function EmailContent({ html, text, allowImages, colors, onOpenLi
         .fs-email {
           box-sizing: border-box;
           width: 100%;
-          padding: ${isHtml ? '16px' : '0'};
           color: ${isHtml ? '#202124' : colors.text};
           background: ${isHtml ? '#ffffff' : 'transparent'};
           font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
