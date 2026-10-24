@@ -1,5 +1,6 @@
 const API = 'https://gmail.googleapis.com/gmail/v1/users/me';
 const MAX_BODY_LENGTH = 6000;
+const MAX_HTML_LENGTH = 300_000;
 
 export type GmailMessage = {
   id: string;
@@ -9,7 +10,10 @@ export type GmailMessage = {
   subject: string;
   date: number;
   snippet: string;
+  /** Plain text, used for scam detection and as the fallback display. */
   body: string;
+  /** Original HTML part for display, or an empty string for plain-text emails. */
+  html: string;
   unread: boolean;
 };
 
@@ -101,12 +105,19 @@ function findPart(part: GmailPart | undefined, mimeType: string): GmailPart | un
   return undefined;
 }
 
+/** Gmail's text/plain alternative marks images as "[image: Google]"; they're noise for reading and detection. */
+const cleanPlainText = (text: string) => text.replace(/\[image:[^\]]*\]/gi, '').replace(/\n{3,}/g, '\n\n').trim();
+
 function extractBody(payload: GmailPart | undefined) {
-  const plain = findPart(payload, 'text/plain');
-  if (plain?.body?.data) return decodeBase64Url(plain.body.data);
-  const html = findPart(payload, 'text/html');
-  if (html?.body?.data) return htmlToText(decodeBase64Url(html.body.data));
-  return '';
+  const plainPart = findPart(payload, 'text/plain');
+  const htmlPart = findPart(payload, 'text/html');
+  const html = htmlPart?.body?.data ? decodeBase64Url(htmlPart.body.data) : '';
+  const text = plainPart?.body?.data ? decodeBase64Url(plainPart.body.data) : html ? htmlToText(html) : '';
+
+  return {
+    body: cleanPlainText(text).slice(0, MAX_BODY_LENGTH),
+    html: html.length <= MAX_HTML_LENGTH ? html : '',
+  };
 }
 
 function parseFrom(from: string) {
@@ -152,7 +163,7 @@ function toGmailMessage(message: GmailApiMessage): GmailMessage {
     subject: header('subject') || '(no subject)',
     date: Number(message.internalDate ?? Date.now()),
     snippet: message.snippet ?? '',
-    body: extractBody(message.payload).slice(0, MAX_BODY_LENGTH),
+    ...extractBody(message.payload),
     unread: message.labelIds?.includes('UNREAD') ?? false,
   };
 }

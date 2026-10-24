@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Linking, Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -6,11 +7,25 @@ import { assessEmail, emailInput } from '../../shield/assess';
 import type { GmailMessage } from '../../shield/gmail';
 import { senderLogoUrl } from '../../shield/senderLogo';
 import { useTheme } from '../../theme/ThemeProvider';
+import { dialog } from '../dialog/dialogStore';
 import { AlertIcon, CheckIcon, MailIcon } from '../icons';
 import { Sheet } from '../Sheet';
 import { toast } from '../toast/toastStore';
+import EmailContent from './EmailContent';
 import { Bullet, CoachSecondOpinion } from './ScamVerdict';
 import { SenderAvatar } from './SenderAvatar';
+
+const HAS_REMOTE_IMAGES = /<img[^>]+src=["']?https?:/i;
+
+function linkDestination(url: string) {
+  if (/^mailto:/i.test(url)) return 'your email app';
+  if (/^tel:/i.test(url)) return 'your phone app';
+  try {
+    return new URL(url).hostname.replace(/^www\./, '');
+  } catch {
+    return url;
+  }
+}
 
 export function EmailSheet({ email, onClose }: { email: GmailMessage | null; onClose: () => void }) {
   return (
@@ -26,6 +41,24 @@ function EmailView({ email }: { email: GmailMessage }) {
   const assessment = assessEmail(email);
   const input = emailInput(email);
   const flagged = assessment.level !== 'safe';
+  const [allowImages, setAllowImages] = useState(!flagged);
+  const imagesHidden = !allowImages && HAS_REMOTE_IMAGES.test(email.html);
+
+  const openLink = async (url: string) => {
+    const destination = linkDestination(url);
+    const confirmed = await dialog.confirm(
+      flagged
+        ? {
+            title: 'This link could be a scam',
+            message: `It opens ${destination}. This email shows signs of a scam, so only continue if you trust the sender.`,
+            confirmLabel: 'Open anyway',
+            destructive: true,
+          }
+        : { title: 'Open this link?', message: `It opens ${destination}.`, confirmLabel: 'Open' },
+    );
+    if (!confirmed) return;
+    Linking.openURL(url).catch(() => toast.error("Couldn't open this link."));
+  };
 
   const openInGmail = () => {
     Linking.openURL(`https://mail.google.com/mail/u/0/#all/${email.id}`).catch(() =>
@@ -123,16 +156,39 @@ function EmailView({ email }: { email: GmailMessage }) {
 
       <View style={{ height: 0.5, backgroundColor: colors.border, marginVertical: spacing.lg }} />
 
-      <Text
-        selectable
-        style={{
-          color: colors.text,
-          fontFamily: typography.fontFamily.regular,
-          fontSize: typography.fontSize.md,
-          lineHeight: 24,
-        }}>
-        {email.body || email.snippet}
-      </Text>
+      {imagesHidden ? (
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: spacing.sm,
+            marginBottom: spacing.md,
+            paddingVertical: spacing.sm + 2,
+            paddingHorizontal: spacing.md,
+            borderRadius: radius.lg,
+            backgroundColor: colors.surface,
+          }}>
+          <Text style={{ flex: 1, color: colors.textSecondary, fontFamily: typography.fontFamily.regular, fontSize: typography.fontSize.xs }}>
+            Images are hidden to protect you.
+          </Text>
+          <Pressable accessibilityRole="button" onPress={() => setAllowImages(true)} hitSlop={8}>
+            <Text style={{ color: colors.primary, fontFamily: typography.fontFamily.semiBold, fontSize: typography.fontSize.xs }}>
+              Show images
+            </Text>
+          </Pressable>
+        </View>
+      ) : null}
+
+      <View style={{ borderRadius: radius.lg, overflow: 'hidden' }}>
+        <EmailContent
+          html={email.html}
+          text={email.body || email.snippet}
+          allowImages={allowImages}
+          colors={{ text: colors.text, link: colors.primary }}
+          onOpenLink={openLink}
+          dom={{ matchContents: true, scrollEnabled: false }}
+        />
+      </View>
 
       <Pressable
         accessibilityRole="link"
