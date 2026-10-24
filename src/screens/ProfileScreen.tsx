@@ -208,23 +208,38 @@ export function ProfileScreen() {
       </View>
 
       <View style={{ gap: spacing.lg, marginTop: spacing.xl }}>
-        <SettingsGroup
-          title="Budgets"
-          footer={
-            !isLoading && summaries.length === 0
-              ? 'Split your money into categories and track what you spend. Smart Coach can plan it with you.'
-              : undefined
-          }>
-          {summaries.map((summary) => (
-            <BudgetCard key={summary.budget.id} summary={summary} onPress={() => setSheet({ mode: 'view', budgetId: summary.budget.id })} />
-          ))}
-          <SettingsRow
-            Icon={PlusIcon}
-            label={summaries.length === 0 ? 'Create a budget' : 'New budget'}
-            busy={isLoading}
-            onPress={() => setSheet({ mode: 'create' })}
-          />
-        </SettingsGroup>
+        <View style={{ gap: spacing.sm + 4 }}>
+          {summaries.length > 0 ? (
+            <SettingsGroup title="Budgets">
+              {summaries.map((summary) => (
+                <BudgetCard
+                  key={summary.budget.id}
+                  summary={summary}
+                  onPress={() => setSheet({ mode: 'view', budgetId: summary.budget.id })}
+                />
+              ))}
+            </SettingsGroup>
+          ) : (
+            <Text
+              accessibilityRole="header"
+              style={{ color: colors.text, fontFamily: typography.fontFamily.semiBold, fontSize: typography.fontSize.lg }}>
+              Budgets
+            </Text>
+          )}
+          <SettingsGroup
+            footer={
+              !isLoading && summaries.length === 0
+                ? 'Split your money into categories and track what you spend. Smart Coach can plan it with you.'
+                : undefined
+            }>
+            <SettingsRow
+              Icon={PlusIcon}
+              label={summaries.length === 0 ? 'Create a budget' : 'New budget'}
+              busy={isLoading}
+              onPress={() => setSheet({ mode: 'create' })}
+            />
+          </SettingsGroup>
+        </View>
 
         <SettingsGroup title="Account">
           <SettingsRow
