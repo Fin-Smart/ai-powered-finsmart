@@ -3,21 +3,9 @@ import { Alert, FlatList, Modal, Platform, Pressable, Text, View } from 'react-n
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { deleteConversation, loadConversations, type Conversation } from '../../coach/chatHistory';
+import { formatWhen } from '../../lib/formatWhen';
 import { useTheme } from '../../theme/ThemeProvider';
 import { HistoryIcon } from '../icons';
-
-const timeFormat = new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' });
-const weekdayFormat = new Intl.DateTimeFormat(undefined, { weekday: 'short' });
-const dateFormat = new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short' });
-const DAY = 24 * 60 * 60 * 1000;
-
-function formatWhen(timestamp: number) {
-  const startOfToday = new Date().setHours(0, 0, 0, 0);
-  if (timestamp >= startOfToday) return timeFormat.format(timestamp);
-  if (timestamp >= startOfToday - DAY) return 'Yesterday';
-  if (timestamp >= startOfToday - 6 * DAY) return weekdayFormat.format(timestamp);
-  return dateFormat.format(timestamp);
-}
 
 type HistorySheetProps = {
   visible: boolean;

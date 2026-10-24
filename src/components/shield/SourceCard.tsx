@@ -1,5 +1,5 @@
 import type { ComponentType } from 'react';
-import { Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 
 import { useTheme } from '../../theme/ThemeProvider';
 import type { IconProps } from '../icons';
@@ -10,9 +10,10 @@ type SourceCardProps = {
   description: string;
   status: string;
   footnote?: string;
+  action?: { label: string; onPress: () => void; busy?: boolean };
 };
 
-export function SourceCard({ Icon, title, description, status, footnote }: SourceCardProps) {
+export function SourceCard({ Icon, title, description, status, footnote, action }: SourceCardProps) {
   const { colors, spacing, typography, radius } = useTheme().theme;
 
   return (
@@ -20,7 +21,7 @@ export function SourceCard({ Icon, title, description, status, footnote }: Sourc
       style={{
         gap: spacing.sm,
       }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm + 4, backgroundColor: colors.surface, paddingHorizontal: spacing.md }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm + 4, backgroundColor: colors.surface, paddingHorizontal: spacing.md, borderRadius: radius.xl }}>
         <View
           style={{
             height: 40,
@@ -59,6 +60,30 @@ export function SourceCard({ Icon, title, description, status, footnote }: Sourc
         }}>
         {description}
       </Text>
+
+      {action ? (
+        <Pressable
+          accessibilityRole="button"
+          disabled={action.busy}
+          onPress={action.onPress}
+          style={({ pressed }) => ({
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: spacing.sm,
+            alignSelf: 'flex-start',
+            paddingVertical: spacing.sm + 2,
+            paddingHorizontal: spacing.md + 4,
+            borderRadius: 999,
+            backgroundColor: colors.primary,
+            opacity: pressed || action.busy ? 0.7 : 1,
+          })}>
+          {action.busy ? <ActivityIndicator size="small" color={colors.onPrimary} /> : null}
+          <Text style={{ color: colors.onPrimary, fontFamily: typography.fontFamily.semiBold, fontSize: typography.fontSize.sm }}>
+            {action.label}
+          </Text>
+        </Pressable>
+      ) : null}
 
       {footnote ? (
         <Text

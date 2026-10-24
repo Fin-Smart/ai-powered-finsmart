@@ -7,6 +7,7 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
     "ios": {
+      "bundleIdentifier": "com.fintitans.finsmart",
       "supportsTablet": true,
       "icon": {
         "light": "./assets/icon.png",
@@ -15,6 +16,7 @@
       }
     },
     "android": {
+      "package": "com.fintitans.finsmart",
       "adaptiveIcon": {
         "backgroundColor": "#0082FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -45,7 +47,9 @@
         {
           "microphonePermission": "Allow $(PRODUCT_NAME) to use the microphone so you can talk to Smart Coach.",
           "speechRecognitionPermission": "Allow $(PRODUCT_NAME) to turn your voice into text for Smart Coach.",
-          "androidSpeechServicePackages": ["com.google.android.googlequicksearchbox"]
+          "androidSpeechServicePackages": [
+            "com.google.android.googlequicksearchbox"
+          ]
         }
       ]
     ],

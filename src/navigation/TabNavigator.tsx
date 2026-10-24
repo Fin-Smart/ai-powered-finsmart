@@ -2,9 +2,12 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState, type ComponentType } from 'react';
 import { BackHandler, StyleSheet, View } from 'react-native';
 
+import FinsmartSms from '../../modules/finsmart-sms';
 import { BottomNav, type TabKey } from '../components/BottomNav';
 import { useAuthUser } from '../hooks/useAuthUser';
 import { useKeyboardVisible } from '../hooks/useKeyboardVisible';
+import { restoreGoogleSession } from '../lib/googleAuth';
+import { setPendingSmsAction, usePendingSmsAction } from '../shield/smsLaunch';
 import { AIScreen } from '../screens/AIScreen';
 import { HomeScreen } from '../screens/HomeScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
@@ -27,10 +30,26 @@ export function TabNavigator() {
   const [activeTab, setActiveTab] = useState<TabKey>('home');
   const [visitedTabs, setVisitedTabs] = useState<ReadonlySet<TabKey>>(() => new Set(['home']));
 
+  const pendingSmsAction = usePendingSmsAction();
+
   const selectTab = (tab: TabKey) => {
     setActiveTab(tab);
     setVisitedTabs((prev) => (prev.has(tab) ? prev : new Set(prev).add(tab)));
   };
+
+  useEffect(() => {
+    void restoreGoogleSession();
+    if (!FinsmartSms) return;
+
+    const launchAction = FinsmartSms.consumeLaunchAction();
+    if (launchAction) setPendingSmsAction(launchAction);
+    const subscription = FinsmartSms.addListener('onLaunchAction', setPendingSmsAction);
+    return () => subscription.remove();
+  }, []);
+
+  useEffect(() => {
+    if (pendingSmsAction) selectTab('shield');
+  }, [pendingSmsAction]);
 
   useEffect(() => {
     if (activeTab === 'home') {
