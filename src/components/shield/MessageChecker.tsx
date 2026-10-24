@@ -7,17 +7,40 @@ import { ScamVerdict } from './ScamVerdict';
 
 type Channel = MessageInput['channel'];
 
-export function MessageChecker() {
+const COPY: Record<Channel, { sender: string; senderPlaceholder: string; body: string; bodyPlaceholder: string; button: string }> = {
+  sms: {
+    sender: 'From (number or name)',
+    senderPlaceholder: 'e.g. +27 82 123 4567',
+    body: 'Message',
+    bodyPlaceholder: "Paste the text you're unsure about",
+    button: 'Check text',
+  },
+  email: {
+    sender: 'From (email address)',
+    senderPlaceholder: 'e.g. support@bank.co.za',
+    body: 'Email',
+    bodyPlaceholder: "Paste the email you're unsure about",
+    button: 'Check email',
+  },
+};
+
+export function MessageChecker({ channel }: { channel: Channel }) {
   const { colors, spacing, typography, radius } = useTheme().theme;
-  const [channel, setChannel] = useState<Channel>('sms');
   const [sender, setSender] = useState('');
+  const [subject, setSubject] = useState('');
   const [text, setText] = useState('');
   const [checked, setChecked] = useState<{ id: number; input: MessageInput; assessment: ScamAssessment } | null>(null);
+  const copy = COPY[channel];
 
   const clearResult = () => setChecked(null);
 
   const check = () => {
-    const input: MessageInput = { channel, text: text.trim(), sender: sender.trim() || undefined };
+    const input: MessageInput = {
+      channel,
+      text: text.trim(),
+      sender: sender.trim() || undefined,
+      subject: channel === 'email' ? subject.trim() || undefined : undefined,
+    };
     Keyboard.dismiss();
     setChecked({ id: Date.now(), input, assessment: assessMessage(input) });
   };
@@ -42,49 +65,15 @@ export function MessageChecker() {
 
   return (
     <View style={{  borderRadius: radius.xl,  gap: spacing.md }}>
-      <View
-        accessibilityRole="radiogroup"
-        style={{ flexDirection: 'row', backgroundColor: colors.background, borderRadius: 999, padding: 4 }}>
-        {(['sms', 'email'] as const).map((option) => {
-          const selected = channel === option;
-          return (
-            <Pressable
-              key={option}
-              accessibilityRole="radio"
-              accessibilityState={{ selected }}
-              onPress={() => {
-                setChannel(option);
-                clearResult();
-              }}
-              style={{
-                flex: 1,
-                alignItems: 'center',
-                paddingVertical: spacing.sm,
-                borderRadius: 999,
-                backgroundColor: selected ? colors.text : 'transparent',
-              }}>
-              <Text
-                style={{
-                  color: selected ? colors.background : colors.text,
-                  fontFamily: typography.fontFamily.semiBold,
-                  fontSize: typography.fontSize.sm,
-                }}>
-                {option === 'sms' ? 'Text message' : 'Email'}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
-
       <View style={{ gap: spacing.xs }}>
-        <Text style={label}>{channel === 'sms' ? 'From (number or name)' : 'From (email address)'}</Text>
+        <Text style={label}>{copy.sender}</Text>
         <TextInput
           value={sender}
           onChangeText={(value) => {
             setSender(value);
             clearResult();
           }}
-          placeholder={channel === 'sms' ? 'e.g. +27 82 123 4567' : 'e.g. support@bank.co.za'}
+          placeholder={copy.senderPlaceholder}
           placeholderTextColor={colors.textMuted}
           autoCapitalize="none"
           autoCorrect={false}
@@ -93,15 +82,31 @@ export function MessageChecker() {
         />
       </View>
 
+      {channel === 'email' ? (
+        <View style={{ gap: spacing.xs }}>
+          <Text style={label}>Subject</Text>
+          <TextInput
+            value={subject}
+            onChangeText={(value) => {
+              setSubject(value);
+              clearResult();
+            }}
+            placeholder="e.g. Your account has been suspended"
+            placeholderTextColor={colors.textMuted}
+            style={inputStyle}
+          />
+        </View>
+      ) : null}
+
       <View style={{ gap: spacing.xs }}>
-        <Text style={label}>Message</Text>
+        <Text style={label}>{copy.body}</Text>
         <TextInput
           value={text}
           onChangeText={(value) => {
             setText(value);
             clearResult();
           }}
-          placeholder="Paste the message you're unsure about"
+          placeholder={copy.bodyPlaceholder}
           placeholderTextColor={colors.textMuted}
           multiline
           textAlignVertical="top"
@@ -126,7 +131,7 @@ export function MessageChecker() {
             fontFamily: typography.fontFamily.semiBold,
             fontSize: typography.fontSize.md,
           }}>
-          Check message
+          {copy.button}
         </Text>
       </Pressable>
 
