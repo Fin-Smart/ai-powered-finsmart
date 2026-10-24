@@ -1,5 +1,5 @@
-import { GoogleAuthProvider, signInWithCredential, signOut as firebaseSignOut } from 'firebase/auth';
-import { Platform, TurboModuleRegistry } from 'react-native';
+import { GoogleAuthProvider, signInWithCredential, signOut as firebaseSignOut } from '@react-native-firebase/auth';
+import { TurboModuleRegistry } from 'react-native';
 
 import { auth } from './firebase';
 
@@ -7,19 +7,16 @@ type GoogleSignInPackage = typeof import('@react-native-google-signin/google-sig
 
 export const GMAIL_READONLY_SCOPE = 'https://www.googleapis.com/auth/gmail.readonly';
 
+/** The iOS client ID comes from GoogleService-Info.plist; Firebase Auth also needs the web client ID. */
 const webClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
-const iosClientId = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID;
 
-/**
- * `null` in Expo Go (the package throws on import without its native module) and when the
- * OAuth client IDs for this platform haven't been configured yet.
- */
+/** `null` when the native module is missing or the web client ID hasn't been configured yet. */
 const google: GoogleSignInPackage | null =
-  TurboModuleRegistry.get('RNGoogleSignin') && webClientId && (Platform.OS !== 'ios' || iosClientId)
+  TurboModuleRegistry.get('RNGoogleSignin') && webClientId
     ? require('@react-native-google-signin/google-signin')
     : null;
 
-google?.GoogleSignin.configure({ webClientId, iosClientId });
+google?.GoogleSignin.configure({ webClientId });
 
 export const isGoogleSignInAvailable = google !== null;
 

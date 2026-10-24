@@ -8,6 +8,7 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "bundleIdentifier": "com.fintitans.finsmart",
+      "googleServicesFile": "./GoogleService-Info.plist",
       "supportsTablet": true,
       "icon": {
         "light": "./assets/icon.png",
@@ -17,6 +18,7 @@
     },
     "android": {
       "package": "com.fintitans.finsmart",
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "backgroundColor": "#0082FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -50,6 +52,18 @@
           "androidSpeechServicePackages": [
             "com.google.android.googlequicksearchbox"
           ]
+        }
+      ],
+      "@react-native-firebase/app",
+      "@react-native-firebase/auth",
+      "@react-native-firebase/app-check",
+      "@react-native-google-signin/google-signin",
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "useFrameworks": "dynamic"
+          }
         }
       ]
     ],

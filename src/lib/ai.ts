@@ -1,6 +1,6 @@
-import { getAI, GoogleAIBackend } from 'firebase/ai';
+import { getAI, GoogleAIBackend } from '@react-native-firebase/ai';
 
-import { app } from './firebase';
+import { app, appCheck, auth } from './firebase';
 
-/** Firebase AI Logic using the Gemini Developer API (free Spark tier). */
-export const ai = getAI(app, { backend: new GoogleAIBackend() });
+/** Firebase AI Logic using the Gemini Developer API (free Spark tier), protected by App Check. */
+export const ai = getAI(app, { backend: new GoogleAIBackend(), appCheck, auth });

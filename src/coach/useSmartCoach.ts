@@ -1,4 +1,4 @@
-import type { ChatSession, Content } from 'firebase/ai';
+import type { ChatSession, Content } from '@react-native-firebase/ai';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { createTitle, saveConversation, type Conversation, type StoredMessage } from './chatHistory';
@@ -37,7 +37,7 @@ function completedTurns(messages: CoachMessage[]): StoredMessage[] {
 const toChatHistory = (messages: StoredMessage[]): Content[] =>
   messages.map((message) => ({
     role: message.role === 'user' ? 'user' : 'model',
-    parts: [{ text: message.text }],
+    parts: [{ type: 'text', text: message.text }],
   }));
 
 export function useSmartCoach() {

@@ -1,4 +1,4 @@
-import { getGenerativeModel, Schema } from 'firebase/ai';
+import { getGenerativeModel, Schema } from '@react-native-firebase/ai';
 
 import { COACH_MODEL, getCoachErrorMessage } from '../coach/smartCoach';
 import { ai } from '../lib/ai';

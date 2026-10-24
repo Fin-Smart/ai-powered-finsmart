@@ -1,11 +1,10 @@
-import { FirebaseError } from 'firebase/app';
 import {
   createUserWithEmailAndPassword,
   sendEmailVerification,
   sendPasswordResetEmail,
   signInWithEmailAndPassword,
   updateProfile,
-} from 'firebase/auth';
+} from '@react-native-firebase/auth';
 
 import { auth } from './firebase';
 
@@ -29,8 +28,13 @@ export async function sendResetLink(email: string) {
   await sendPasswordResetEmail(auth, email.trim());
 }
 
+const firebaseErrorCode = (error: unknown) =>
+  typeof error === 'object' && error !== null && 'code' in error && typeof error.code === 'string' && error.code.startsWith('auth/')
+    ? error.code
+    : '';
+
 export function authErrorMessage(error: unknown) {
-  const code = error instanceof FirebaseError ? error.code : '';
+  const code = firebaseErrorCode(error);
 
   switch (code) {
     case 'auth/invalid-credential':

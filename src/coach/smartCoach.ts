@@ -1,4 +1,4 @@
-import { AIError, AIErrorCode, getGenerativeModel, type Content } from 'firebase/ai';
+import { AIError, getGenerativeModel, type Content } from '@react-native-firebase/ai';
 
 import { ai } from '../lib/ai';
 
@@ -47,13 +47,15 @@ export function getCoachErrorMessage(error: unknown) {
     if (status === 429) {
       return "I've reached my usage limit for the moment. Give me a minute and try again.";
     }
-    if (status === 401 || status === 403 || error.code === AIErrorCode.API_NOT_ENABLED) {
+    // AIErrorCode is a const enum, which Babel can't inline across modules, so compare the strings.
+    const code: string = error.code;
+    if (status === 401 || status === 403 || code === 'api-not-enabled') {
       return "I can't connect right now. Smart Coach isn't fully set up yet.";
     }
-    if (error.code === AIErrorCode.FETCH_ERROR) {
+    if (code === 'fetch-error') {
       return "I couldn't reach the server. Check your internet connection and try again.";
     }
-    if (error.code === AIErrorCode.RESPONSE_ERROR) {
+    if (code === 'response-error') {
       return "I can't help with that one. Try asking about budgeting, saving, debt or investing basics.";
     }
   }

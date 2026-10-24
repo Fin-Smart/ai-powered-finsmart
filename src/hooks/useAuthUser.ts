@@ -1,4 +1,4 @@
-import { onAuthStateChanged, type User } from 'firebase/auth';
+import { onAuthStateChanged, type User } from '@react-native-firebase/auth';
 import { useEffect, useState } from 'react';
 
 import { auth } from '../lib/firebase';
