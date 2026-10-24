@@ -23,7 +23,16 @@ export function SourceCard({ Icon, title, description, status, footnote, action,
       style={{
         gap: spacing.sm,
       }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm + 4, backgroundColor: colors.surface, paddingHorizontal: spacing.md, borderRadius: radius.xl }}>
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: spacing.sm + 4,
+          minHeight: 56,
+          backgroundColor: colors.surface,
+          paddingHorizontal: spacing.md,
+          borderRadius: radius.xl,
+        }}>
         <View
           style={{
             height: 40,
@@ -44,14 +53,17 @@ export function SourceCard({ Icon, title, description, status, footnote, action,
           {title}
         </Text>
         {toggle ? (
-          <Switch
-            accessibilityLabel={`${title} checks`}
-            value={toggle.value}
-            onValueChange={toggle.onValueChange}
-            trackColor={{ false: colors.border, true: colors.primary }}
-            thumbColor={Platform.OS === 'android' ? colors.onPrimary : undefined}
-            ios_backgroundColor={colors.border}
-          />
+          <View style={{ height: 56, justifyContent: 'center' }}>
+            <Switch
+              accessibilityLabel={`${title} checks`}
+              value={toggle.value}
+              onValueChange={toggle.onValueChange}
+              trackColor={{ false: colors.border, true: colors.primary }}
+              thumbColor={Platform.OS === 'android' ? colors.onPrimary : undefined}
+              ios_backgroundColor={colors.border}
+              style={{ marginVertical: 0 }}
+            />
+          </View>
         ) : (
           <Text
             style={{

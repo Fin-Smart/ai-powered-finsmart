@@ -1,9 +1,12 @@
-import { Pressable, Text, View } from 'react-native';
+import { useState } from 'react';
+import { Image, Pressable, Text, View } from 'react-native';
 
 import { formatWhen } from '../../lib/formatWhen';
 import type { RiskLevel } from '../../shield/scamDetector';
 import { useTheme } from '../../theme/ThemeProvider';
 import { RiskBadge } from './RiskBadge';
+
+const AVATAR_SIZE = 44;
 
 type InboxRowProps = {
   title: string;
@@ -11,12 +14,16 @@ type InboxRowProps = {
   date: number;
   unread: boolean;
   level: RiskLevel;
+  /** Sender logo; ignored for flagged messages so a spoofed sender never borrows a real brand's logo. */
+  avatarUri?: string | null;
   onPress: () => void;
 };
 
-export function InboxRow({ title, preview, date, unread, level, onPress }: InboxRowProps) {
+export function InboxRow({ title, preview, date, unread, level, avatarUri, onPress }: InboxRowProps) {
   const { colors, spacing, typography } = useTheme().theme;
+  const [logoFailed, setLogoFailed] = useState(false);
   const initial = title.match(/[A-Za-z0-9]/)?.[0].toUpperCase() ?? '#';
+  const showLogo = Boolean(avatarUri) && level === 'safe' && !logoFailed;
 
   return (
     <Pressable
@@ -31,21 +38,32 @@ export function InboxRow({ title, preview, date, unread, level, onPress }: Inbox
       })}>
       <View
         style={{
-          width: 44,
-          height: 44,
-          borderRadius: 22,
+          width: AVATAR_SIZE,
+          height: AVATAR_SIZE,
+          borderRadius: AVATAR_SIZE / 2,
           backgroundColor: level === 'scam' ? colors.secondaryMuted : colors.surface,
           alignItems: 'center',
           justifyContent: 'center',
+          overflow: 'hidden',
         }}>
-        <Text
-          style={{
-            color: level === 'scam' ? colors.secondary : colors.text,
-            fontFamily: typography.fontFamily.semiBold,
-            fontSize: typography.fontSize.md,
-          }}>
-          {initial}
-        </Text>
+        {showLogo && avatarUri ? (
+          <Image
+            source={{ uri: avatarUri }}
+            onError={() => setLogoFailed(true)}
+            accessibilityIgnoresInvertColors
+            resizeMode="contain"
+            style={{ width: AVATAR_SIZE * 0.62, height: AVATAR_SIZE * 0.62 }}
+          />
+        ) : (
+          <Text
+            style={{
+              color: level === 'scam' ? colors.secondary : colors.text,
+              fontFamily: typography.fontFamily.semiBold,
+              fontSize: typography.fontSize.md,
+            }}>
+            {initial}
+          </Text>
+        )}
       </View>
 
       <View style={{ flex: 1, gap: 2 }}>

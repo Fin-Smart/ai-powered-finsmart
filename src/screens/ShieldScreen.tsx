@@ -11,6 +11,7 @@ import { SourceCard } from '../components/shield/SourceCard';
 import { ThreadSheet } from '../components/shield/ThreadSheet';
 import { assessConversation, assessEmail, isFlagged } from '../shield/assess';
 import type { GmailMessage } from '../shield/gmail';
+import { senderLogoUrl } from '../shield/senderLogo';
 import { takePendingSmsAction, usePendingSmsAction } from '../shield/smsLaunch';
 import { useGmailScan, type GmailStatus } from '../shield/useGmailScan';
 import { useSmsInbox } from '../shield/useSmsInbox';
@@ -21,14 +22,16 @@ const PAGE_SIZE = 20;
 type Filter = 'all' | 'flagged';
 
 const GMAIL_STATUS_LABEL: Record<GmailStatus, string> = {
-  unavailable: 'Needs app build',
+  unavailable: 'Unavailable',
   signedOut: 'Not connected',
   needsAccess: 'Not connected',
   paused: 'Off',
   loading: 'Checking…',
   ready: 'On',
-  error: "Couldn't load",
+  error: 'Not synced',
 };
+
+const UNAVAILABLE_NOTE = 'Update FinSmart to the latest version to turn this on.';
 
 export function ShieldScreen() {
   const { colors, spacing, typography } = useTheme().theme;
@@ -87,37 +90,32 @@ export function ShieldScreen() {
   } as const;
 
   const smsCard = !sms.isSupported
-    ? {
-        status: 'Needs app build',
-        footnote: 'Install the FinSmart app build to use this. It isn’t available in Expo Go.',
-      }
+    ? { status: 'Unavailable', footnote: UNAVAILABLE_NOTE }
     : sms.isDefault
       ? { status: 'On' }
       : {
           status: 'Off',
-          action: { label: 'Set as default SMS app', onPress: () => void sms.becomeDefault(), busy: sms.isRequesting },
-          footnote:
-            "Picture and group messages (MMS) aren't supported yet. You can switch back to your usual SMS app any time in Settings.",
+          action: { label: 'Set as SMS app', onPress: () => void sms.becomeDefault(), busy: sms.isRequesting },
+          footnote: "Picture and group messages aren't supported. You can change your SMS app at any time in Settings.",
         };
 
   const gmailAction =
     gmail.status === 'signedOut'
-      ? { label: 'Sign in with Google', onPress: () => void gmail.connect(), busy: gmail.isConnecting }
+      ? { label: 'Continue with Google', onPress: () => void gmail.connect(), busy: gmail.isConnecting }
       : gmail.status === 'needsAccess'
         ? { label: 'Connect Gmail', onPress: () => void gmail.connect(), busy: gmail.isConnecting }
         : gmail.status === 'error'
-          ? { label: 'Try again', onPress: () => void gmail.refresh() }
+          ? { label: 'Retry', onPress: () => void gmail.refresh() }
           : undefined;
 
   return (
-    <Screen title="Shield" subtitle="Spot money scams in your texts and emails.">
-      
+    <Screen title="Shield" subtitle="Scam protection for your texts and email.">
       <View style={{ gap: spacing.sm + 2, marginTop: spacing.lg }}>
         {Platform.OS === 'android' ? (
           <SourceCard
             Icon={MessageIcon}
             title="Text messages"
-            description="Make FinSmart your default SMS app and Shield checks every text you receive, flagging scams before you act on them."
+            description="Shield checks every text as it arrives and warns you before you act on a scam."
             {...smsCard}
           />
         ) : null}
@@ -125,14 +123,14 @@ export function ShieldScreen() {
           Icon={MailIcon}
           title="Gmail"
           status={GMAIL_STATUS_LABEL[gmail.status]}
-          description="Sign in with Google and Shield scans your inbox for fake banks, prize scams and payment requests. Emails are checked on your phone."
+          description="Shield checks your recent emails on this phone for fake banks, prize scams and payment requests."
           action={gmailAction}
           toggle={
             gmail.status === 'ready' || gmail.status === 'loading' || gmail.status === 'paused' || gmail.status === 'error'
               ? { value: gmail.enabled, onValueChange: (value) => void gmail.setEnabled(value) }
               : undefined
           }
-          footnote={gmail.status === 'unavailable' ? 'Install the FinSmart app build to use this. It isn’t available in Expo Go.' : undefined}
+          footnote={gmail.status === 'unavailable' ? UNAVAILABLE_NOTE : undefined}
         />
         {Platform.OS === 'ios' ? (
           <Text
@@ -142,7 +140,7 @@ export function ShieldScreen() {
               fontSize: typography.fontSize.xs,
               lineHeight: 18,
             }}>
-            iPhone doesn't let apps read your texts. You can still paste a suspicious text below to check it.
+            iPhone doesn't allow apps to read text messages. To check a text, copy it into Check a message below.
           </Text>
         ) : null}
       </View>
@@ -195,7 +193,7 @@ export function ShieldScreen() {
           </View>
 
           {visibleTexts.length === 0 ? (
-            <Text style={emptyText}>{filter === 'flagged' ? 'No flagged texts. Nice.' : 'No texts yet.'}</Text>
+            <Text style={emptyText}>{filter === 'flagged' ? 'No flagged texts.' : 'No texts yet.'}</Text>
           ) : (
             visibleTexts.slice(0, smsLimit).map(({ conversation, assessment }) => (
               <InboxRow
@@ -226,7 +224,7 @@ export function ShieldScreen() {
           </Text>
           {visibleEmails.length === 0 ? (
             <Text style={emptyText}>
-              {filter === 'flagged' ? 'No flagged emails from the last two weeks.' : 'No emails from the last two weeks.'}
+              {filter === 'flagged' ? 'No flagged emails in the last 14 days.' : 'No emails in the last 14 days.'}
             </Text>
           ) : (
             visibleEmails.map(({ email, assessment }) => (
@@ -237,6 +235,7 @@ export function ShieldScreen() {
                 date={email.date}
                 unread={email.unread}
                 level={assessment.level}
+                avatarUri={senderLogoUrl(email.fromAddress)}
                 onPress={() => setOpenEmail(email)}
               />
             ))
