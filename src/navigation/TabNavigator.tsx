@@ -8,17 +8,17 @@ import { useKeyboardVisible } from '../hooks/useKeyboardVisible';
 import { AIScreen } from '../screens/AIScreen';
 import { HomeScreen } from '../screens/HomeScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
-import { ReportsScreen } from '../screens/ReportsScreen';
+import { ShieldScreen } from '../screens/ShieldScreen';
 import { useTheme } from '../theme/ThemeProvider';
 
 const SCREENS: Record<TabKey, ComponentType> = {
   home: HomeScreen,
-  reports: ReportsScreen,
+  shield: ShieldScreen,
   ai: AIScreen,
   profile: ProfileScreen,
 };
 
-const TAB_ORDER: TabKey[] = ['home', 'reports', 'ai', 'profile'];
+const TAB_ORDER: TabKey[] = ['home', 'shield', 'ai', 'profile'];
 
 export function TabNavigator() {
   const { colors } = useTheme().theme;

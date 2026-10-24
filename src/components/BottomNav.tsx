@@ -4,13 +4,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useTheme } from '../theme/ThemeProvider';
 import { GlassGroup, GlassSurface, isLiquidGlassEnabled } from './GlassSurface';
-import { CoachIcon, HomeIcon, ProfileIcon, ReportsIcon, type IconProps } from './icons';
+import { CoachIcon, HomeIcon, ProfileIcon, ShieldIcon, type IconProps } from './icons';
 
-export type TabKey = 'home' | 'reports' | 'ai' | 'profile';
+export type TabKey = 'home' | 'shield' | 'ai' | 'profile';
 
 const LEFT_TABS: { key: TabKey; label: string; Icon: ComponentType<IconProps> }[] = [
   { key: 'home', label: 'Home', Icon: HomeIcon },
-  { key: 'reports', label: 'Reports', Icon: ReportsIcon },
+  { key: 'shield', label: 'Shield', Icon: ShieldIcon },
   { key: 'ai', label: 'AI', Icon: CoachIcon },
 ];
 
