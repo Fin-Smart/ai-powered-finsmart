@@ -1,6 +1,6 @@
 import { StatusBar } from 'expo-status-bar';
-import { useState, type ComponentType } from 'react';
-import { View } from 'react-native';
+import { useEffect, useState, type ComponentType } from 'react';
+import { BackHandler, View } from 'react-native';
 
 import { BottomNav, type TabKey } from '../components/BottomNav';
 import { useAuthUser } from '../hooks/useAuthUser';
@@ -22,6 +22,19 @@ export function TabNavigator() {
   const user = useAuthUser();
   const [activeTab, setActiveTab] = useState<TabKey>('home');
   const ActiveScreen = SCREENS[activeTab];
+
+  useEffect(() => {
+    if (activeTab === 'home') {
+      return;
+    }
+
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      setActiveTab('home');
+      return true;
+    });
+
+    return () => subscription.remove();
+  }, [activeTab]);
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
