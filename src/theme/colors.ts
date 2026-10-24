@@ -35,6 +35,8 @@ export type ThemeColors = {
   floatingSurface: string;
   floatingBorder: string;
   floatingActive: string;
+  /** Translucent field fill that reads on solid surfaces and on liquid glass. */
+  fill: string;
   statusBar: 'light' | 'dark';
 };
 
@@ -57,6 +59,7 @@ export const lightColors: ThemeColors = {
   floatingSurface: palette.white,
   floatingBorder: 'rgba(0, 0, 0, 0.08)',
   floatingActive: 'rgba(0, 0, 0, 0.06)',
+  fill: 'rgba(120, 120, 128, 0.12)',
   statusBar: 'dark',
 };
 
@@ -79,6 +82,7 @@ export const darkColors: ThemeColors = {
   floatingSurface: palette.gray900,
   floatingBorder: 'rgba(255, 255, 255, 0.1)',
   floatingActive: 'rgba(255, 255, 255, 0.1)',
+  fill: 'rgba(120, 120, 128, 0.24)',
   statusBar: 'light',
 };
 

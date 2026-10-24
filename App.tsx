@@ -6,11 +6,10 @@ import {
   useFonts,
 } from '@expo-google-fonts/poppins';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import './src/lib/firebase';
-import { TabNavigator } from './src/navigation/TabNavigator';
+import { RootNavigator } from './src/navigation/RootNavigator';
 import { ThemeProvider } from './src/theme/ThemeProvider';
 
 SplashScreen.preventAutoHideAsync();
@@ -23,12 +22,6 @@ export default function App() {
     Poppins_700Bold,
   });
 
-  useEffect(() => {
-    if (loaded || error) {
-      SplashScreen.hideAsync();
-    }
-  }, [loaded, error]);
-
   if (!loaded && !error) {
     return null;
   }
@@ -36,7 +29,7 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <ThemeProvider>
-        <TabNavigator />
+        <RootNavigator />
       </ThemeProvider>
     </SafeAreaProvider>
   );

@@ -62,6 +62,17 @@ export async function restoreGoogleSession() {
   }
 }
 
+/**
+ * Starts a native Google session without touching the Firebase account, so people who log in with
+ * email and password can still connect Gmail. Returns false if they cancel.
+ */
+export async function ensureGoogleSession(): Promise<boolean> {
+  const { GoogleSignin, isSuccessResponse } = requireGoogle();
+  if (GoogleSignin.getCurrentUser()) return true;
+  await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+  return isSuccessResponse(await GoogleSignin.signIn());
+}
+
 export function hasGmailAccess() {
   return google?.GoogleSignin.getCurrentUser()?.scopes.includes(GMAIL_READONLY_SCOPE) ?? false;
 }

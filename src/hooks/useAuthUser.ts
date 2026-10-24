@@ -10,3 +10,15 @@ export function useAuthUser() {
 
   return user;
 }
+
+/** Like `useAuthUser`, but also reports whether Firebase is still restoring a saved session. */
+export function useAuthState() {
+  const [state, setState] = useState<{ user: User | null; initializing: boolean }>({
+    user: auth.currentUser,
+    initializing: true,
+  });
+
+  useEffect(() => onAuthStateChanged(auth, (user) => setState({ user, initializing: false })), []);
+
+  return state;
+}

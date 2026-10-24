@@ -4,6 +4,7 @@ import { Alert } from 'react-native';
 import { useAuthUser } from '../hooks/useAuthUser';
 import { auth } from '../lib/firebase';
 import {
+  ensureGoogleSession,
   getGoogleAccessToken,
   hasGmailAccess,
   isGoogleSignInAvailable,
@@ -52,8 +53,8 @@ export function useGmailScan() {
   const connect = useCallback(async () => {
     setIsConnecting(true);
     try {
-      if (!auth.currentUser && !(await signInWithGoogle())) return;
-      if (!(await requestGmailAccess())) return;
+      const hasSession = auth.currentUser ? await ensureGoogleSession() : await signInWithGoogle();
+      if (!hasSession || !(await requestGmailAccess())) return;
       await refresh();
     } catch (error) {
       Alert.alert("Couldn't connect Gmail", error instanceof Error ? error.message : 'Please try again.');
