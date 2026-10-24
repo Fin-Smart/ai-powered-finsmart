@@ -15,6 +15,7 @@ import {
   type IconProps,
 } from '../icons';
 import { ControlSlider } from './ControlSlider';
+import { useChartColors } from './palette';
 import { SectionHeader } from './SectionHeader';
 
 const LABEL_ICONS: Record<string, ComponentType<IconProps>> = {
@@ -33,6 +34,7 @@ const HEIGHT = 176;
 /** One Control Center–style level per budget, showing how much of it has been spent. */
 export function BudgetLevels({ summaries }: { summaries: BudgetSummary[] }) {
   const { colors, spacing, typography } = useTheme().theme;
+  const chart = useChartColors();
   const { width: screenWidth } = useWindowDimensions();
   const available = screenWidth - spacing.lg * 2;
   const width = Math.max(
@@ -48,7 +50,7 @@ export function BudgetLevels({ summaries }: { summaries: BudgetSummary[] }) {
         showsHorizontalScrollIndicator={false}
         style={{ marginHorizontal: -spacing.lg }}
         contentContainerStyle={{ paddingHorizontal: spacing.lg, gap: spacing.md }}>
-        {summaries.map(({ budget, spentCents, receivedCents, remainingCents }) => {
+        {summaries.map(({ budget, spentCents, receivedCents, remainingCents }, index) => {
           const total = budget.availableCents + receivedCents;
           const used = total > 0 ? spentCents / total : 0;
           const over = remainingCents < 0;
@@ -63,7 +65,7 @@ export function BudgetLevels({ summaries }: { summaries: BudgetSummary[] }) {
                 width={width}
                 height={HEIGHT}
                 Icon={LABEL_ICONS[budget.label] ?? WalletIcon}
-                tint={over ? colors.secondary : colors.primary}
+                tint={over ? colors.danger : chart.series[index % chart.series.length]}
                 accessibilityLabel={`${budget.name}, ${Math.round(used * 100)} percent spent, ${caption}`}
               />
               <View style={{ alignItems: 'center' }}>
@@ -75,7 +77,7 @@ export function BudgetLevels({ summaries }: { summaries: BudgetSummary[] }) {
                 <Text
                   numberOfLines={1}
                   style={{
-                    color: over ? colors.secondary : colors.textSecondary,
+                    color: over ? colors.danger : colors.textSecondary,
                     fontFamily: typography.fontFamily.regular,
                     fontSize: typography.fontSize.xs,
                   }}>

@@ -6,6 +6,7 @@ import { startOfDay } from '../../budget/period';
 import type { BudgetSummary } from '../../budget/types';
 import { useTheme } from '../../theme/ThemeProvider';
 import { ControlSlider } from './ControlSlider';
+import { useChartColors } from './palette';
 import { SectionHeader } from './SectionHeader';
 
 const HEIGHT = 132;
@@ -24,6 +25,7 @@ function currentWeek(now = Date.now()) {
 /** Spending per day this week, drawn as slim Control Center–style levels. Tap a day to see its total. */
 export function WeekChart({ summaries, currency }: { summaries: BudgetSummary[]; currency: string }) {
   const { colors, spacing, typography } = useTheme().theme;
+  const chart = useChartColors();
   const { width: screenWidth } = useWindowDimensions();
   const today = startOfDay(Date.now());
   const days = useMemo(() => currentWeek(), []);
@@ -75,12 +77,12 @@ export function WeekChart({ summaries, currency }: { summaries: BudgetSummary[];
                 value={totals[index] / max}
                 width={barWidth}
                 height={HEIGHT}
-                tint={isSelected ? colors.primary : colors.text}
+                tint={chart.series[index % chart.series.length]}
                 accessibilityLabel={`${dayName.format(day)} spending`}
               />
               <Text
                 style={{
-                  color: isSelected ? colors.primary : isToday ? colors.text : colors.textMuted,
+                  color: isSelected ? chart.series[index % chart.series.length] : isToday ? colors.text : colors.textMuted,
                   fontFamily: isSelected || isToday ? typography.fontFamily.semiBold : typography.fontFamily.medium,
                   fontSize: typography.fontSize.xs,
                 }}>

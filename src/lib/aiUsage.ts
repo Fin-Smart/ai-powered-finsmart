@@ -9,8 +9,8 @@ export type Plan = 'free' | 'pro';
 
 /** Smart Coach tokens per day for each plan. Subscriptions will set `plan` on the user's profile. */
 export const DAILY_TOKEN_ALLOWANCE: Record<Plan, number> = {
-  free: 100_000,
-  pro: 2_000_000,
+  free: 20_000,
+  pro: 500_000,
 };
 
 export const PLAN_LABELS: Record<Plan, string> = { free: 'Free', pro: 'Pro' };

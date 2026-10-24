@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useSyncExternalStore } from 'react';
 
 /**
  * A small on-device log of what the person does in FinSmart. Smart Coach reads a summary of it
@@ -28,6 +29,20 @@ const DETAIL_LENGTH = 80;
 let log: HabitLog = { events: [], quiz: [] };
 let shieldSnapshot = { flaggedEmails: 0, flaggedTexts: 0 };
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
+let version = 0;
+const listeners = new Set<() => void>();
+
+function changed() {
+  version += 1;
+  listeners.forEach((listener) => listener());
+}
+
+function subscribeHabits(listener: () => void) {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+}
 
 const loaded = AsyncStorage.getItem(STORAGE_KEY)
   .then((raw) => {
@@ -38,10 +53,12 @@ const loaded = AsyncStorage.getItem(STORAGE_KEY)
       events: [...(stored.events ?? []), ...log.events].slice(-MAX_EVENTS),
       quiz: [...(stored.quiz ?? []), ...log.quiz].slice(-MAX_QUIZ_RESULTS),
     };
+    changed();
   })
   .catch(() => undefined);
 
 function persist() {
+  changed();
   if (saveTimer) clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {
     saveTimer = null;
@@ -63,6 +80,38 @@ export function recordQuizAnswer(topic: string, question: string, correct: boole
 /** Live counts from Shield; not stored, since the inbox itself is the source of truth. */
 export function setShieldSnapshot(snapshot: { flaggedEmails: number; flaggedTexts: number }) {
   shieldSnapshot = snapshot;
+  changed();
+}
+
+export type HabitStats = {
+  quizAnswered: number;
+  quizCorrect: number;
+  lessons: number;
+  scamChecks: number;
+  riskyChecks: number;
+  /** Emails and text conversations Shield currently flags. */
+  shieldFlagged: number;
+};
+
+/** Counts for the last 30 days, for the dashboard. */
+export function habitStats(now = Date.now()): HabitStats {
+  const recent = log.events.filter((event) => now - event.at < WINDOW_MS);
+  const count = (type: HabitType) => recent.filter((event) => event.type === type).length;
+  const quiz = log.quiz.filter((result) => now - result.at < WINDOW_MS);
+  return {
+    quizAnswered: quiz.length,
+    quizCorrect: quiz.filter((result) => result.correct).length,
+    lessons: count('lesson'),
+    scamChecks: count('scam_check'),
+    riskyChecks: count('scam_flagged'),
+    shieldFlagged: shieldSnapshot.flaggedEmails + shieldSnapshot.flaggedTexts,
+  };
+}
+
+/** Live habit counts; re-renders whenever something new is recorded. */
+export function useHabitStats() {
+  useSyncExternalStore(subscribeHabits, () => version);
+  return habitStats();
 }
 
 /** Questions asked in recent quizzes, so new quizzes don't repeat them. */
@@ -73,6 +122,7 @@ export function recentQuizQuestions(limit = 30) {
 export async function clearHabits() {
   await loaded;
   log = { events: [], quiz: [] };
+  changed();
   if (saveTimer) clearTimeout(saveTimer);
   await AsyncStorage.removeItem(STORAGE_KEY).catch(() => undefined);
 }
