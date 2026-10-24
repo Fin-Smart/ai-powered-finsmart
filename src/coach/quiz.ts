@@ -2,6 +2,7 @@ import { AIError, getGenerativeModel, Schema, ThinkingLevel } from '@react-nativ
 
 import { budgetContextForCoach } from '../budget/coachContext';
 import { ai } from '../lib/ai';
+import { recordAiUsage } from '../lib/aiUsage';
 import { habitsForCoach, recentQuizQuestions } from './habits';
 import { FAST_MODEL, getCoachErrorMessage, isTimeout } from './smartCoach';
 
@@ -93,6 +94,7 @@ async function generateBatch(focus: string, count: number): Promise<QuizQuestion
       if (!isRetryable(error)) throw error;
       result = await generate();
     }
+    recordAiUsage(result.response);
     const { questions } = JSON.parse(result.response.text()) as { questions: QuizQuestion[] };
     const usable = questions
       .filter(isValid)

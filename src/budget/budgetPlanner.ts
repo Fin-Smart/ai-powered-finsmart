@@ -2,6 +2,7 @@ import { AIError, getGenerativeModel, Schema, ThinkingLevel } from '@react-nativ
 
 import { FAST_MODEL, getCoachErrorMessage, isTimeout } from '../coach/smartCoach';
 import { ai } from '../lib/ai';
+import { recordAiUsage } from '../lib/aiUsage';
 import { formatMoney } from './money';
 import type { BudgetKind } from './types';
 
@@ -74,6 +75,7 @@ export async function planBudget(request: PlanRequest): Promise<BudgetPlan> {
       if (!(error instanceof AIError) || (error.code as string) !== 'fetch-error' || isTimeout(error)) throw error;
       result = await generate();
     }
+    recordAiUsage(result.response);
     const raw = JSON.parse(result.response.text()) as {
       categories: { name: string; amount: number; reason: string }[];
       tips: string[];

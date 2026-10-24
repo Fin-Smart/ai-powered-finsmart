@@ -2,6 +2,7 @@ import { getGenerativeModel, Schema, ThinkingLevel } from '@react-native-firebas
 
 import { FAST_MODEL, getCoachErrorMessage, isTimeout } from '../coach/smartCoach';
 import { ai } from '../lib/ai';
+import { recordAiUsage } from '../lib/aiUsage';
 import type { MessageInput, RiskLevel } from './scamDetector';
 
 export type CoachReview = {
@@ -58,6 +59,7 @@ function buildPrompt(message: MessageInput) {
 async function requestReview(prompt: string): Promise<CoachReview> {
   try {
     const result = await reviewModel.generateContent(prompt, { timeout: REVIEW_TIMEOUT_MS });
+    recordAiUsage(result.response);
     return JSON.parse(result.response.text()) as CoachReview;
   } catch (error) {
     if (isTimeout(error)) {

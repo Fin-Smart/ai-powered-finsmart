@@ -2,6 +2,7 @@ import type { ChatSession, Content } from '@react-native-firebase/ai';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { toast } from '../components/toast/toastStore';
+import { recordAiUsage } from '../lib/aiUsage';
 import { createTitle, saveConversation, type Conversation, type StoredMessage } from './chatHistory';
 import { recordHabit, recordQuizAnswer } from './habits';
 import { generateQuiz, QUIZ_LENGTH, type QuizQuestion, type QuizRequest } from './quiz';
@@ -172,6 +173,7 @@ export function useSmartCoach() {
 
       try {
         const result = await chat.sendMessageStream(text, { signal: controller.signal });
+        result.response.then(recordAiUsage, () => undefined);
 
         for await (const chunk of result.stream) {
           reply += chunk.text();

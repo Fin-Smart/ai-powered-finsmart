@@ -28,6 +28,11 @@ import Moon02Icon from '@hugeicons/core-free-icons/Moon02Icon';
 import PlusSignIcon from '@hugeicons/core-free-icons/PlusSignIcon';
 import Wallet01Icon from '@hugeicons/core-free-icons/Wallet01Icon';
 import Tick02Icon from '@hugeicons/core-free-icons/Tick02Icon';
+import Airplane01Icon from '@hugeicons/core-free-icons/Airplane01Icon';
+import Briefcase01Icon from '@hugeicons/core-free-icons/Briefcase01Icon';
+import Calendar03Icon from '@hugeicons/core-free-icons/Calendar03Icon';
+import PiggyBankIcon from '@hugeicons/core-free-icons/PiggyBankIcon';
+import SparklesIcon from '@hugeicons/core-free-icons/SparklesIcon';
 import { HugeiconsIcon, type IconSvgElement } from '@hugeicons/react-native';
 
 export type IconProps = {
@@ -84,3 +89,8 @@ export const AppearanceIcon = createIcon(Moon02Icon);
 export const PlusIcon = createIcon(PlusSignIcon);
 export const WalletIcon = createIcon(Wallet01Icon);
 export const TickIcon = createIcon(Tick02Icon);
+export const TravelIcon = createIcon(Airplane01Icon);
+export const BusinessIcon = createIcon(Briefcase01Icon);
+export const EventIcon = createIcon(Calendar03Icon);
+export const SavingsIcon = createIcon(PiggyBankIcon);
+export const SparkleIcon = createIcon(SparklesIcon);

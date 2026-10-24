@@ -100,11 +100,17 @@ export async function deleteBudget(uid: string, budgetId: string) {
   await batch.commit();
 }
 
-/** Removes every budget, transaction and the profile document, for account deletion. */
+/** Removes every budget, transaction, AI usage record and the profile document, for account deletion. */
 export async function deleteUserData(uid: string) {
   const budgets = await getDocs(budgetsRef(uid));
   for (const budget of budgets.docs) {
     await deleteBudget(uid, budget.id);
+  }
+  const usage = await getDocs(collection(db, 'users', uid, 'usage'));
+  if (!usage.empty) {
+    const batch = writeBatch(db);
+    usage.docs.forEach((item) => batch.delete(item.ref));
+    await batch.commit();
   }
   await deleteDoc(profileRef(uid));
 }
