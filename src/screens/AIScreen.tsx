@@ -13,14 +13,8 @@ import { QuickReplies } from '../components/coach/QuickReplies';
 import { QuizCard } from '../components/coach/QuizCard';
 import { ComposeIcon, HistoryIcon } from '../components/icons';
 import { useKeyboardVisible } from '../hooks/useKeyboardVisible';
-import { onSignOut } from '../lib/session';
-import { takeIntent, useActiveTab, usePendingIntent } from '../navigation/quickNav';
+import { takeIntent, usePendingIntent } from '../navigation/quickNav';
 import { useTheme } from '../theme/ThemeProvider';
-
-let autoSessionStarted = false;
-onSignOut(() => {
-  autoSessionStarted = false;
-});
 
 export function AIScreen() {
   const { colors, spacing, typography } = useTheme().theme;
@@ -45,15 +39,6 @@ export function AIScreen() {
   const [draft, setDraft] = useState('');
   const [composerHeight, setComposerHeight] = useState(0);
   const [historyVisible, setHistoryVisible] = useState(false);
-
-  // The tab is mounted in the background for speed, but the session only starts once it's opened,
-  // since it spends the person's tokens. It fails quietly; "Today's lesson" retries with full messages.
-  const activeTab = useActiveTab();
-  useEffect(() => {
-    if (autoSessionStarted || activeTab !== 'ai') return;
-    autoSessionStarted = true;
-    void startSession({ silent: true });
-  }, [activeTab, startSession]);
 
   const quickIntent = usePendingIntent();
   useEffect(() => {

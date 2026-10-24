@@ -12,11 +12,11 @@ export type CoachReview = {
   advice: string[];
 };
 
-/** Flash-Lite with low thinking: a scam verdict is a quick classification, not a long answer. */
 /** Scam signals appear early; long newsletters otherwise dominate the request time. */
 const MAX_MESSAGE_CHARS = 2500;
 const REVIEW_TIMEOUT_MS = 20_000;
 
+/** Flash-Lite with low thinking: a scam verdict is a quick classification, not a long answer. */
 const reviewModel = getGenerativeModel(ai, {
   model: FAST_MODEL,
   systemInstruction: `You are Smart Coach, the scam-awareness coach in the FinSmart app.

@@ -6,7 +6,10 @@ import { OutOfTokensError } from '../lib/aiUsage';
 import { habitsForCoach } from './habits';
 
 export const COACH_MODEL = 'gemini-3.8-flash';
-/** For structured one-shot tasks (scam reviews, budget plans) where speed matters more than depth. */
+/**
+ * For structured one-shot tasks (quizzes, budget plans, scam reviews). Free-tier rate limits are per
+ * model, so these also keep the chat's 3.8 Flash allowance free for chat.
+ */
 export const FAST_MODEL = 'gemini-3.5-flash-lite';
 
 const SYSTEM_INSTRUCTION = `You are Smart Coach, the friendly personal finance teacher inside the FinSmart app.
