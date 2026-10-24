@@ -12,6 +12,7 @@ import { IncomeSheet } from '../components/budget/IncomeSheet';
 import { dialog } from '../components/dialog/dialogStore';
 import {
   AppearanceIcon,
+  AppleLogoIcon,
   CurrencyIcon,
   DeleteIcon,
   GoogleLogoIcon,
@@ -71,6 +72,9 @@ export function ProfileScreen() {
   const methods = user ? signInMethods(user) : [];
   const usesPassword = methods.includes('password');
   const usesGoogle = methods.includes('google');
+  const usesApple = methods.includes('apple');
+  const providers = [usesGoogle && 'Google', usesApple && 'Apple'].filter(Boolean).join(' and ');
+  const signedInWith = !providers ? 'Email' : usesPassword ? `${providers} and email` : providers;
 
   const runBusy = async (action: Exclude<BusyAction, null>, task: () => Promise<void>) => {
     setBusy(action);
@@ -262,9 +266,9 @@ export function ProfileScreen() {
 
         <SettingsGroup title="Account">
           <SettingsRow
-            Icon={usesGoogle ? GoogleLogoIcon : MailIcon}
+            Icon={usesGoogle ? GoogleLogoIcon : usesApple ? AppleLogoIcon : MailIcon}
             label="Signed in with"
-            value={usesGoogle && usesPassword ? 'Google and email' : usesGoogle ? 'Google' : 'Email'}
+            value={signedInWith}
           />
           {usesPassword ? (
             <SettingsRow Icon={LockIcon} label="Change password" busy={busy === 'password'} onPress={changePassword} />

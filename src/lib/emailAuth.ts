@@ -61,8 +61,10 @@ export function authErrorMessage(error: unknown) {
       return 'No internet connection. Check your connection and try again.';
     case 'auth/user-disabled':
       return 'This account has been disabled. Contact FinSmart support.';
+    case 'auth/account-exists-with-different-credential':
+      return 'This email already has a FinSmart account. Log in the way you did before.';
     case 'auth/operation-not-allowed':
-      return "Email sign-in isn't turned on for FinSmart yet.";
+      return "This sign-in method isn't turned on for FinSmart yet.";
     default:
       return error instanceof Error && !code ? error.message : 'Something went wrong. Please try again.';
   }

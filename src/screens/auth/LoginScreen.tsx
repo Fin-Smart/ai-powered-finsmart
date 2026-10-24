@@ -2,10 +2,11 @@ import { useRef, useState } from 'react';
 import { Keyboard, Text, type TextInputInstance } from 'react-native';
 
 import { AuthField } from '../../components/auth/AuthField';
-import { GoogleButton, PrimaryButton, TextLink } from '../../components/auth/AuthButtons';
+import { PrimaryButton, SocialButtons, type SocialProvider, TextLink } from '../../components/auth/AuthButtons';
 import { AuthLayout } from '../../components/auth/AuthLayout';
 import { LockIcon, MailIcon } from '../../components/icons';
 import { toast } from '../../components/toast/toastStore';
+import { signInWithApple } from '../../lib/appleAuth';
 import { authErrorMessage, isValidEmail, logIn, welcomeMessage } from '../../lib/emailAuth';
 import { auth } from '../../lib/firebase';
 import { signInWithGoogle } from '../../lib/googleAuth';
@@ -23,7 +24,7 @@ export function LoginScreen({ initialEmail, onRegister, onForgotPassword }: Logi
   const [email, setEmail] = useState(initialEmail);
   const [password, setPassword] = useState('');
   const [submitted, setSubmitted] = useState(false);
-  const [busy, setBusy] = useState<'email' | 'google' | null>(null);
+  const [busy, setBusy] = useState<'email' | SocialProvider | null>(null);
 
   const emailInvalid = submitted && !isValidEmail(email);
   const passwordInvalid = submitted && !password;
@@ -47,10 +48,10 @@ export function LoginScreen({ initialEmail, onRegister, onForgotPassword }: Logi
     }
   };
 
-  const continueWithGoogle = async () => {
-    setBusy('google');
+  const continueWith = async (provider: SocialProvider) => {
+    setBusy(provider);
     try {
-      if (await signInWithGoogle()) {
+      if (await (provider === 'google' ? signInWithGoogle() : signInWithApple())) {
         toast.success(welcomeMessage(auth.currentUser?.displayName));
       }
     } catch (caught) {
@@ -66,7 +67,11 @@ export function LoginScreen({ initialEmail, onRegister, onForgotPassword }: Logi
       subtitle="Keep learning and keep scammers out."
       footer={
         <>
-          <GoogleButton onPress={continueWithGoogle} busy={busy === 'google'} />
+          <SocialButtons
+            onGoogle={() => continueWith('google')}
+            onApple={() => continueWith('apple')}
+            busy={busy === 'email' ? null : busy}
+          />
           <TextLink prompt="New to FinSmart?" label="Create an account" onPress={() => onRegister(email)} />
         </>
       }>

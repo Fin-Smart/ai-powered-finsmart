@@ -2,7 +2,7 @@
   "expo": {
     "name": "FinSmart",
     "slug": "finsmart",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
@@ -10,6 +10,7 @@
       "bundleIdentifier": "com.fintitans.finsmart",
       "googleServicesFile": "./GoogleService-Info.plist",
       "supportsTablet": true,
+      "usesAppleSignIn": true,
       "icon": {
         "light": "./assets/icon.png",
         "dark": "./assets/icon-dark.png",
@@ -18,6 +19,7 @@
       "infoPlist": {
         "NSSpeechRecognitionUsageDescription": "Allow $(PRODUCT_NAME) to turn your voice into text for Smart Coach.",
         "NSMicrophoneUsageDescription": "Allow $(PRODUCT_NAME) to use the microphone so you can talk to Smart Coach.",
+        "NSPhotoLibraryUsageDescription": "Allow $(PRODUCT_NAME) to access your photos so you can choose images to upload to your account.",
         "ITSAppUsesNonExemptEncryption": false
       }
     },
@@ -66,6 +68,7 @@
       "@react-native-firebase/auth",
       "@react-native-firebase/app-check",
       "@react-native-google-signin/google-signin",
+      "expo-apple-authentication",
       [
         "expo-build-properties",
         {

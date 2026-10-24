@@ -2,10 +2,11 @@ import { useRef, useState } from 'react';
 import { Keyboard, type TextInputInstance } from 'react-native';
 
 import { AuthField } from '../../components/auth/AuthField';
-import { GoogleButton, PrimaryButton, TextLink } from '../../components/auth/AuthButtons';
+import { PrimaryButton, SocialButtons, type SocialProvider, TextLink } from '../../components/auth/AuthButtons';
 import { AuthLayout } from '../../components/auth/AuthLayout';
 import { LockIcon, MailIcon, ProfileIcon } from '../../components/icons';
 import { toast } from '../../components/toast/toastStore';
+import { signInWithApple } from '../../lib/appleAuth';
 import { authErrorMessage, isValidEmail, MIN_PASSWORD_LENGTH, register, welcomeMessage } from '../../lib/emailAuth';
 import { auth } from '../../lib/firebase';
 import { signInWithGoogle } from '../../lib/googleAuth';
@@ -23,7 +24,7 @@ export function RegisterScreen({ initialEmail, onBack, onLogIn }: RegisterScreen
   const [email, setEmail] = useState(initialEmail);
   const [password, setPassword] = useState('');
   const [submitted, setSubmitted] = useState(false);
-  const [busy, setBusy] = useState<'email' | 'google' | null>(null);
+  const [busy, setBusy] = useState<'email' | SocialProvider | null>(null);
 
   const nameInvalid = submitted && !name.trim();
   const emailInvalid = submitted && !isValidEmail(email);
@@ -54,10 +55,10 @@ export function RegisterScreen({ initialEmail, onBack, onLogIn }: RegisterScreen
     }
   };
 
-  const continueWithGoogle = async () => {
-    setBusy('google');
+  const continueWith = async (provider: SocialProvider) => {
+    setBusy(provider);
     try {
-      if (await signInWithGoogle()) {
+      if (await (provider === 'google' ? signInWithGoogle() : signInWithApple())) {
         toast.success(welcomeMessage(auth.currentUser?.displayName));
       }
     } catch (caught) {
@@ -75,7 +76,11 @@ export function RegisterScreen({ initialEmail, onBack, onLogIn }: RegisterScreen
       subtitle="Learn money basics and get warned about scams."
       footer={
         <>
-          <GoogleButton onPress={continueWithGoogle} busy={busy === 'google'} />
+          <SocialButtons
+            onGoogle={() => continueWith('google')}
+            onApple={() => continueWith('apple')}
+            busy={busy === 'email' ? null : busy}
+          />
           <TextLink prompt="Already have an account?" label="Log in" onPress={() => onLogIn(email)} />
         </>
       }>
