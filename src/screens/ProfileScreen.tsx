@@ -1,41 +1,178 @@
 import { useState } from 'react';
 import { ActivityIndicator, Image, Pressable, Text, View } from 'react-native';
 
+import appConfig from '../../app.json';
 import { useBudgets } from '../budget/BudgetsProvider';
+import { CURRENCY_OPTIONS, setPreferredCurrency, usePreferredCurrency } from '../budget/money';
+import { clearConversations } from '../coach/chatHistory';
 import { BudgetCard } from '../components/budget/BudgetCard';
 import { BudgetSheet, type BudgetSheetTarget } from '../components/budget/BudgetSheet';
-import { ProfileIcon } from '../components/icons';
+import { dialog } from '../components/dialog/dialogStore';
+import {
+  AppearanceIcon,
+  CurrencyIcon,
+  DeleteIcon,
+  GoogleLogoIcon,
+  HistoryIcon,
+  InfoIcon,
+  LockIcon,
+  LogoutIcon,
+  MailIcon,
+  MailVerifyIcon,
+  ProfileIcon,
+} from '../components/icons';
 import { Screen } from '../components/Screen';
+import { SettingsGroup, SettingsRow } from '../components/settings/SettingsList';
 import { errorMessage, toast } from '../components/toast/toastStore';
 import { useAuthUser } from '../hooks/useAuthUser';
+import { deleteAccount, resendVerificationEmail, sendPasswordChangeLink, SignInAgainError, signInMethods } from '../lib/account';
 import { signOutEverywhere } from '../lib/googleAuth';
-import { useTheme } from '../theme/ThemeProvider';
+import { useTheme, type ThemePreference } from '../theme/ThemeProvider';
 
 const AVATAR_SIZE = 72;
 
+const APPEARANCE_LABELS: Record<ThemePreference, string> = {
+  system: 'Match phone',
+  light: 'Light',
+  dark: 'Dark',
+};
+
+type BusyAction = 'password' | 'verify' | 'signOut' | 'delete' | null;
+
 export function ProfileScreen() {
-  const { colors, spacing, typography, radius } = useTheme().theme;
+  const { theme, preference, setPreference } = useTheme();
+  const { colors, spacing, typography, radius } = theme;
   const user = useAuthUser();
   const { summaries, isLoading } = useBudgets();
+  const currency = usePreferredCurrency();
   const [sheet, setSheet] = useState<BudgetSheetTarget | null>(null);
-  const [isSigningOut, setIsSigningOut] = useState(false);
+  const [busy, setBusy] = useState<BusyAction>(null);
+
+  const methods = user ? signInMethods(user) : [];
+  const usesPassword = methods.includes('password');
+  const usesGoogle = methods.includes('google');
+
+  const runBusy = async (action: Exclude<BusyAction, null>, task: () => Promise<void>) => {
+    setBusy(action);
+    try {
+      await task();
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const changePassword = async () => {
+    const confirmed = await dialog.confirm({
+      title: 'Change password',
+      message: `We'll email a secure link to ${user?.email ?? 'your inbox'} so you can choose a new password.`,
+      confirmLabel: 'Send link',
+    });
+    if (!confirmed) return;
+    await runBusy('password', async () => {
+      try {
+        const email = await sendPasswordChangeLink();
+        toast.success(`Password link sent to ${email}`);
+      } catch (error) {
+        toast.error(errorMessage(error, "Couldn't send the link. Please try again."));
+      }
+    });
+  };
+
+  const verifyEmail = () =>
+    runBusy('verify', async () => {
+      try {
+        await resendVerificationEmail();
+        toast.success('Verification email sent. Check your inbox.');
+      } catch (error) {
+        toast.error(errorMessage(error, "Couldn't send the verification email. Please try again."));
+      }
+    });
+
+  const chooseAppearance = () =>
+    dialog.show({
+      title: 'Appearance',
+      buttons: [
+        ...(Object.keys(APPEARANCE_LABELS) as ThemePreference[]).map((option) => ({
+          label: option === preference ? `${APPEARANCE_LABELS[option]} ✓` : APPEARANCE_LABELS[option],
+          onPress: () => setPreference(option),
+        })),
+        { label: 'Cancel', style: 'cancel' as const },
+      ],
+    });
+
+  const chooseCurrency = () =>
+    dialog.show({
+      title: 'Currency',
+      message: 'Used for new budgets. Existing budgets keep their currency.',
+      buttons: [
+        ...CURRENCY_OPTIONS.map((option) => ({
+          label: option.code === currency ? `${option.name} ✓` : option.name,
+          onPress: () => {
+            setPreferredCurrency(option.code).catch(() =>
+              toast.error("Couldn't save your currency. It will reset when you restart the app."),
+            );
+          },
+        })),
+        { label: 'Cancel', style: 'cancel' as const },
+      ],
+    });
+
+  const clearHistory = async () => {
+    const confirmed = await dialog.confirm({
+      title: 'Clear Smart Coach history?',
+      message: 'All saved chats on this phone will be removed.',
+      confirmLabel: 'Clear',
+      destructive: true,
+    });
+    if (!confirmed) return;
+    try {
+      await clearConversations();
+      toast.success('Chat history cleared');
+    } catch (error) {
+      toast.error(errorMessage(error, "Couldn't clear your chats. Please try again."));
+    }
+  };
 
   const signOut = async () => {
-    setIsSigningOut(true);
+    const confirmed = await dialog.confirm({ title: 'Sign out of FinSmart?', confirmLabel: 'Sign out', destructive: true });
+    if (!confirmed) return;
+    setBusy('signOut');
     try {
       await signOutEverywhere();
       toast.success('Signed out');
     } catch (error) {
-      setIsSigningOut(false);
+      setBusy(null);
       toast.error(errorMessage(error, "Couldn't sign out. Please try again."));
     }
   };
 
-  const sectionTitle = {
-    color: colors.text,
-    fontFamily: typography.fontFamily.semiBold,
-    fontSize: typography.fontSize.lg,
-  } as const;
+  const removeAccount = async () => {
+    const confirmed = await dialog.confirm({
+      title: 'Delete your account?',
+      message:
+        'Your budgets, spending records and Smart Coach chats will be permanently deleted, and FinSmart will lose access to your Gmail. This cannot be undone.',
+      confirmLabel: 'Delete account',
+      destructive: true,
+    });
+    if (!confirmed) return;
+    setBusy('delete');
+    try {
+      if (await deleteAccount()) {
+        toast.success('Your account has been deleted');
+      } else {
+        setBusy(null);
+      }
+    } catch (error) {
+      setBusy(null);
+      if (error instanceof SignInAgainError) {
+        toast.error(error.message, { action: { label: 'Log out', onPress: () => void signOutEverywhere() } });
+      } else {
+        toast.error(errorMessage(error, "Couldn't delete your account. Please try again."));
+      }
+    }
+  };
+
+  const currencyName = CURRENCY_OPTIONS.find((option) => option.code === currency)?.name ?? currency;
 
   return (
     <Screen title="Profile">
@@ -66,16 +203,13 @@ export function ProfileScreen() {
           <Text numberOfLines={1} style={{ color: colors.textSecondary, fontFamily: typography.fontFamily.regular, fontSize: typography.fontSize.sm }}>
             {user?.email}
           </Text>
-          {user && !user.emailVerified ? (
-            <Text style={{ color: colors.textMuted, fontFamily: typography.fontFamily.regular, fontSize: typography.fontSize.xs }}>
-              Email not verified yet. Check your inbox for the link.
-            </Text>
-          ) : null}
         </View>
       </View>
 
       <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.xl, marginBottom: spacing.sm + 2 }}>
-        <Text accessibilityRole="header" style={[sectionTitle, { flex: 1 }]}>
+        <Text
+          accessibilityRole="header"
+          style={{ flex: 1, color: colors.text, fontFamily: typography.fontFamily.semiBold, fontSize: typography.fontSize.lg }}>
           Budgets
         </Text>
         {summaries.length > 0 ? (
@@ -124,26 +258,39 @@ export function ProfileScreen() {
         </View>
       )}
 
-      <Pressable
-        accessibilityRole="button"
-        disabled={isSigningOut}
-        onPress={signOut}
-        style={({ pressed }) => ({
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: spacing.sm,
-          marginTop: spacing.xl,
-          paddingVertical: spacing.sm + 6,
-          borderRadius: 999,
-          backgroundColor: colors.surface,
-          opacity: pressed || isSigningOut ? 0.7 : 1,
-        })}>
-        {isSigningOut ? <ActivityIndicator size="small" color={colors.secondary} /> : null}
-        <Text style={{ color: colors.secondary, fontFamily: typography.fontFamily.semiBold, fontSize: typography.fontSize.md }}>
-          Sign out
-        </Text>
-      </Pressable>
+      <View style={{ gap: spacing.lg, marginTop: spacing.xl }}>
+        <SettingsGroup title="Account">
+          <SettingsRow
+            Icon={usesGoogle ? GoogleLogoIcon : MailIcon}
+            label="Signed in with"
+            value={usesGoogle && usesPassword ? 'Google and email' : usesGoogle ? 'Google' : 'Email'}
+          />
+          {usesPassword ? (
+            <SettingsRow Icon={LockIcon} label="Change password" busy={busy === 'password'} onPress={changePassword} />
+          ) : null}
+          {user && !user.emailVerified ? (
+            <SettingsRow Icon={MailVerifyIcon} label="Verify email" value="Not verified" busy={busy === 'verify'} onPress={verifyEmail} />
+          ) : null}
+        </SettingsGroup>
+
+        <SettingsGroup title="Preferences">
+          <SettingsRow Icon={AppearanceIcon} label="Appearance" value={APPEARANCE_LABELS[preference]} onPress={chooseAppearance} />
+          <SettingsRow Icon={CurrencyIcon} label="Currency" value={currencyName} onPress={chooseCurrency} />
+        </SettingsGroup>
+
+        <SettingsGroup title="Smart Coach" footer="Chats are saved on this phone only.">
+          <SettingsRow Icon={HistoryIcon} label="Clear chat history" onPress={clearHistory} />
+        </SettingsGroup>
+
+        <SettingsGroup title="About">
+          <SettingsRow Icon={InfoIcon} label="Version" value={appConfig.expo.version} />
+        </SettingsGroup>
+
+        <SettingsGroup>
+          <SettingsRow Icon={LogoutIcon} label="Sign out" destructive busy={busy === 'signOut'} onPress={signOut} />
+          <SettingsRow Icon={DeleteIcon} label="Delete account" destructive busy={busy === 'delete'} onPress={removeAccount} />
+        </SettingsGroup>
+      </View>
 
       <BudgetSheet target={sheet} onClose={() => setSheet(null)} />
     </Screen>

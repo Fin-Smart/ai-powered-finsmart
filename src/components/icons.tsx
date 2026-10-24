@@ -19,6 +19,12 @@ import Shield01Icon from '@hugeicons/core-free-icons/Shield01Icon';
 import HugeStopIcon from '@hugeicons/core-free-icons/StopIcon';
 import UserIcon from '@hugeicons/core-free-icons/UserIcon';
 import WorkHistoryIcon from '@hugeicons/core-free-icons/WorkHistoryIcon';
+import ArrowRight01Icon from '@hugeicons/core-free-icons/ArrowRight01Icon';
+import Delete02Icon from '@hugeicons/core-free-icons/Delete02Icon';
+import Logout01Icon from '@hugeicons/core-free-icons/Logout01Icon';
+import MailValidation01Icon from '@hugeicons/core-free-icons/MailValidation01Icon';
+import Money03Icon from '@hugeicons/core-free-icons/Money03Icon';
+import Moon02Icon from '@hugeicons/core-free-icons/Moon02Icon';
 import { HugeiconsIcon, type IconSvgElement } from '@hugeicons/react-native';
 
 export type IconProps = {
@@ -66,3 +72,9 @@ export const LockIcon = createIcon(LockPasswordIcon);
 export const MailSentIcon = createIcon(MailSend01Icon);
 export const EyeIcon = createIcon(ViewIcon);
 export const EyeOffIcon = createIcon(ViewOffSlashIcon);
+export const ChevronRightIcon = createIcon(ArrowRight01Icon);
+export const DeleteIcon = createIcon(Delete02Icon);
+export const LogoutIcon = createIcon(Logout01Icon);
+export const MailVerifyIcon = createIcon(MailValidation01Icon);
+export const CurrencyIcon = createIcon(Money03Icon);
+export const AppearanceIcon = createIcon(Moon02Icon);

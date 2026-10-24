@@ -1,3 +1,6 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useSyncExternalStore } from 'react';
+
 const CURRENCY_BY_REGION: Record<string, string> = {
   ZA: 'ZAR',
   US: 'USD',
@@ -17,11 +20,55 @@ const CURRENCY_BY_REGION: Record<string, string> = {
   IE: 'EUR',
 };
 
-/** Currency for the phone's region, defaulting to rand for this South African app. */
-export function defaultCurrency() {
+export const CURRENCY_OPTIONS = [
+  { code: 'ZAR', name: 'South African rand' },
+  { code: 'USD', name: 'US dollar' },
+  { code: 'EUR', name: 'Euro' },
+  { code: 'GBP', name: 'British pound' },
+  { code: 'NGN', name: 'Nigerian naira' },
+  { code: 'KES', name: 'Kenyan shilling' },
+  { code: 'BWP', name: 'Botswana pula' },
+] as const;
+
+const CURRENCY_KEY = 'settings:currency';
+let preferredCurrency: string | null = null;
+const currencyListeners = new Set<() => void>();
+
+AsyncStorage.getItem(CURRENCY_KEY)
+  .then((stored) => {
+    if (stored) {
+      preferredCurrency = stored;
+      currencyListeners.forEach((listener) => listener());
+    }
+  })
+  .catch(() => undefined);
+
+function regionCurrency() {
   const locale = Intl.NumberFormat().resolvedOptions().locale;
   const region = locale.match(/[-_]([A-Z]{2})\b/)?.[1];
   return (region && CURRENCY_BY_REGION[region]) || 'ZAR';
+}
+
+/** The currency picked in Profile settings, else the phone region's, defaulting to rand. */
+export function defaultCurrency() {
+  return preferredCurrency ?? regionCurrency();
+}
+
+export async function setPreferredCurrency(code: string) {
+  preferredCurrency = code;
+  currencyListeners.forEach((listener) => listener());
+  await AsyncStorage.setItem(CURRENCY_KEY, code);
+}
+
+function subscribeCurrency(listener: () => void) {
+  currencyListeners.add(listener);
+  return () => {
+    currencyListeners.delete(listener);
+  };
+}
+
+export function usePreferredCurrency() {
+  return useSyncExternalStore(subscribeCurrency, defaultCurrency);
 }
 
 const formatters = new Map<string, Intl.NumberFormat>();

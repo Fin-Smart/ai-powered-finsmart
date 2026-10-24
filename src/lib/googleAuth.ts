@@ -1,4 +1,9 @@
-import { GoogleAuthProvider, signInWithCredential, signOut as firebaseSignOut } from '@react-native-firebase/auth';
+import {
+  GoogleAuthProvider,
+  reauthenticateWithCredential,
+  signInWithCredential,
+  signOut as firebaseSignOut,
+} from '@react-native-firebase/auth';
 import { TurboModuleRegistry } from 'react-native';
 
 import { auth } from './firebase';
@@ -49,6 +54,26 @@ export async function signOutEverywhere() {
     await google.GoogleSignin.signOut().catch(() => undefined);
   }
   await firebaseSignOut(auth);
+}
+
+/** Confirms the current Firebase user with Google again, for sensitive actions like deleting the account. */
+export async function reauthenticateWithGoogle(): Promise<boolean> {
+  const { GoogleSignin, isSuccessResponse } = requireGoogle();
+  const user = auth.currentUser;
+  if (!user) return false;
+  await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+  const response = await GoogleSignin.signIn();
+  if (!isSuccessResponse(response)) return false;
+  const idToken = response.data.idToken ?? (await GoogleSignin.getTokens()).idToken;
+  await reauthenticateWithCredential(user, GoogleAuthProvider.credential(idToken));
+  return true;
+}
+
+/** Removes FinSmart's Google and Gmail permissions from the Google account. */
+export async function revokeGoogleAccess() {
+  if (!google?.GoogleSignin.getCurrentUser()) return;
+  await google.GoogleSignin.revokeAccess().catch(() => undefined);
+  await google.GoogleSignin.signOut().catch(() => undefined);
 }
 
 /** Restores the native Google session after an app restart so Gmail tokens can be fetched. */

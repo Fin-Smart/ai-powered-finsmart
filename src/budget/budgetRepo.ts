@@ -63,6 +63,13 @@ export async function deleteBudget(uid: string, budgetId: string) {
   await batch.commit();
 }
 
+export async function deleteAllBudgets(uid: string) {
+  const budgets = await getDocs(budgetsRef(uid));
+  for (const budget of budgets.docs) {
+    await deleteBudget(uid, budget.id);
+  }
+}
+
 export async function addTransaction(uid: string, budgetId: string, draft: TransactionDraft) {
   await addDoc(transactionsRef(uid, budgetId), { ...draft, createdAt: Date.now() });
 }

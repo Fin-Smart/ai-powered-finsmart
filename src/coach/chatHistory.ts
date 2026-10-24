@@ -53,6 +53,10 @@ export function deleteConversation(id: string) {
   });
 }
 
+export function clearConversations() {
+  return enqueue(() => AsyncStorage.removeItem(STORAGE_KEY));
+}
+
 export function createTitle(firstQuestion: string) {
   const singleLine = firstQuestion.replace(/\s+/g, ' ').trim();
   return singleLine.length > TITLE_LENGTH ? `${singleLine.slice(0, TITLE_LENGTH - 1).trimEnd()}…` : singleLine;
