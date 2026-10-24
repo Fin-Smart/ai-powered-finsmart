@@ -3,6 +3,7 @@ import { useEffect, useState, type ComponentType } from 'react';
 import { BackHandler, StyleSheet, View } from 'react-native';
 
 import FinsmartSms from '../../modules/finsmart-sms';
+import { BudgetsProvider } from '../budget/BudgetsProvider';
 import { BottomNav, type TabKey } from '../components/BottomNav';
 import { useAuthUser } from '../hooks/useAuthUser';
 import { useKeyboardVisible } from '../hooks/useKeyboardVisible';
@@ -65,21 +66,23 @@ export function TabNavigator() {
   }, [activeTab]);
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
-      {TAB_ORDER.filter((tab) => visitedTabs.has(tab)).map((tab) => {
-        const Screen = SCREENS[tab];
-        return (
-          <View key={tab} style={[StyleSheet.absoluteFill, tab !== activeTab && styles.hidden]}>
-            <Screen />
-          </View>
-        );
-      })}
+    <BudgetsProvider>
+      <View style={{ flex: 1, backgroundColor: colors.background }}>
+        {TAB_ORDER.filter((tab) => visitedTabs.has(tab)).map((tab) => {
+          const Screen = SCREENS[tab];
+          return (
+            <View key={tab} style={[StyleSheet.absoluteFill, tab !== activeTab && styles.hidden]}>
+              <Screen />
+            </View>
+          );
+        })}
 
-      {keyboardVisible ? null : (
-        <BottomNav activeTab={activeTab} onTabPress={selectTab} avatarUri={user?.photoURL} />
-      )}
-      <StatusBar style={colors.statusBar} />
-    </View>
+        {keyboardVisible ? null : (
+          <BottomNav activeTab={activeTab} onTabPress={selectTab} avatarUri={user?.photoURL} />
+        )}
+        <StatusBar style={colors.statusBar} />
+      </View>
+    </BudgetsProvider>
   );
 }
 

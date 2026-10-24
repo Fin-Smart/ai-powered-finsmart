@@ -1,5 +1,6 @@
 import { AIError, getGenerativeModel, ThinkingLevel, type Content } from '@react-native-firebase/ai';
 
+import { budgetContextForCoach } from '../budget/coachContext';
 import { ai } from '../lib/ai';
 
 export const COACH_MODEL = 'gemini-3.8-flash';
@@ -31,8 +32,13 @@ const coachModel = getGenerativeModel(ai, {
   generationConfig: { thinkingConfig: { thinkingLevel: ThinkingLevel.LOW } },
 });
 
+/** Each chat starts with the user's latest budgets so advice can use their real numbers. */
 export function startCoachChat(history: Content[] = []) {
-  return coachModel.startChat({ history });
+  const budgets = budgetContextForCoach();
+  return coachModel.startChat({
+    history,
+    systemInstruction: budgets ? `${SYSTEM_INSTRUCTION}\n\n${budgets}` : SYSTEM_INSTRUCTION,
+  });
 }
 
 export const COACH_SUGGESTIONS = [
