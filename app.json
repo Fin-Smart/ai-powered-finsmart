@@ -1,19 +1,23 @@
 {
   "expo": {
-    "name": "mobile-portfolio",
-    "slug": "mobile-portfolio",
+    "name": "FinSmart",
+    "slug": "finsmart",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "icon": {
+        "light": "./assets/icon.png",
+        "dark": "./assets/icon-dark.png",
+        "tinted": "./assets/icon-tinted.png"
+      }
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#0082FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false
@@ -23,8 +27,33 @@
     },
     "plugins": [
       "expo-font",
-      "expo-splash-screen",
-      "expo-status-bar"
-    ]
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 180,
+          "backgroundColor": "#FFFFFF",
+          "dark": {
+            "image": "./assets/splash-icon.png",
+            "backgroundColor": "#000000"
+          }
+        }
+      ],
+      "expo-status-bar",
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "Allow $(PRODUCT_NAME) to use the microphone so you can talk to Smart Coach.",
+          "speechRecognitionPermission": "Allow $(PRODUCT_NAME) to turn your voice into text for Smart Coach.",
+          "androidSpeechServicePackages": ["com.google.android.googlequicksearchbox"]
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "e08e5099-b5cb-4795-acf4-d968d0bb7058"
+      }
+    },
+    "owner": "oscarpoco"
   }
 }

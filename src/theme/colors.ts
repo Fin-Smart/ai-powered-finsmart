@@ -32,9 +32,9 @@ export type ThemeColors = {
   onSecondary: string;
   danger: string;
   overlay: string;
-  navSurface: string;
-  navBorder: string;
-  navActive: string;
+  floatingSurface: string;
+  floatingBorder: string;
+  floatingActive: string;
   statusBar: 'light' | 'dark';
 };
 
@@ -54,9 +54,9 @@ export const lightColors: ThemeColors = {
   onSecondary: palette.white,
   danger: palette.red,
   overlay: 'rgba(0, 0, 0, 0.4)',
-  navSurface: palette.white,
-  navBorder: 'rgba(0, 0, 0, 0.08)',
-  navActive: 'rgba(0, 0, 0, 0.06)',
+  floatingSurface: palette.white,
+  floatingBorder: 'rgba(0, 0, 0, 0.08)',
+  floatingActive: 'rgba(0, 0, 0, 0.06)',
   statusBar: 'dark',
 };
 
@@ -76,9 +76,9 @@ export const darkColors: ThemeColors = {
   onSecondary: palette.white,
   danger: palette.red,
   overlay: 'rgba(0, 0, 0, 0.6)',
-  navSurface: palette.gray900,
-  navBorder: 'rgba(255, 255, 255, 0.1)',
-  navActive: 'rgba(255, 255, 255, 0.1)',
+  floatingSurface: palette.gray900,
+  floatingBorder: 'rgba(255, 255, 255, 0.1)',
+  floatingActive: 'rgba(255, 255, 255, 0.1)',
   statusBar: 'light',
 };
 

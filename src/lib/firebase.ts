@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { type Analytics, getAnalytics, isSupported } from 'firebase/analytics';
 import { getApp, getApps, initializeApp } from 'firebase/app';
+import { CustomProvider, initializeAppCheck } from 'firebase/app-check';
 import {
   getAuth,
   getReactNativePersistence,
@@ -22,6 +23,29 @@ const firebaseConfig = {
 };
 
 export const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+
+/**
+ * AI Logic enforces App Check. The JS SDK has no native attestation on iOS/Android,
+ * so development uses a debug token registered in the Firebase console.
+ * Must run before any service that sends App Check tokens (e.g. AI Logic) is created.
+ */
+const appCheckDebugToken = process.env.EXPO_PUBLIC_FIREBASE_APPCHECK_DEBUG_TOKEN;
+
+if (__DEV__ && appCheckDebugToken) {
+  (globalThis as { FIREBASE_APPCHECK_DEBUG_TOKEN?: string }).FIREBASE_APPCHECK_DEBUG_TOKEN =
+    appCheckDebugToken;
+
+  try {
+    initializeAppCheck(app, {
+      provider: new CustomProvider({
+        getToken: () => Promise.reject(new Error('No production App Check provider configured.')),
+      }),
+      isTokenAutoRefreshEnabled: true,
+    });
+  } catch {
+    // App Check already initialized (Fast Refresh)
+  }
+}
 
 function createAuth(): Auth {
   if (Platform.OS === 'web') {

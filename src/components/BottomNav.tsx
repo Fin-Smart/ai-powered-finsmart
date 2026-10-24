@@ -1,45 +1,25 @@
-import AiMagicIcon from '@hugeicons/core-free-icons/AiMagicIcon';
-import Home11Icon from '@hugeicons/core-free-icons/Home11Icon';
-import LeftToRightListBulletIcon from '@hugeicons/core-free-icons/LeftToRightListBulletIcon';
-import UserIcon from '@hugeicons/core-free-icons/UserIcon';
-import { HugeiconsIcon } from '@hugeicons/react-native';
-import {
-  GlassContainer,
-  GlassView,
-  isGlassEffectAPIAvailable,
-  isLiquidGlassAvailable,
-} from 'expo-glass-effect';
-import { useState, type ReactNode } from 'react';
-import {
-  Image,
-  Platform,
-  Pressable,
-  StyleSheet,
-  View,
-  type StyleProp,
-  type ViewStyle,
-} from 'react-native';
+import { useState, type ComponentType, type ReactNode } from 'react';
+import { Image, Pressable, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useTheme } from '../theme/ThemeProvider';
+import { GlassGroup, GlassSurface, isLiquidGlassEnabled } from './GlassSurface';
+import { CoachIcon, HomeIcon, ProfileIcon, ReportsIcon, type IconProps } from './icons';
 
 export type TabKey = 'home' | 'reports' | 'ai' | 'profile';
 
-const LEFT_TABS = [
-  { key: 'home', label: 'Home', icon: Home11Icon },
-  { key: 'reports', label: 'Reports', icon: LeftToRightListBulletIcon },
-  { key: 'ai', label: 'AI', icon: AiMagicIcon },
-] as const;
+const LEFT_TABS: { key: TabKey; label: string; Icon: ComponentType<IconProps> }[] = [
+  { key: 'home', label: 'Home', Icon: HomeIcon },
+  { key: 'reports', label: 'Reports', Icon: ReportsIcon },
+  { key: 'ai', label: 'AI', Icon: CoachIcon },
+];
 
 const BAR_HEIGHT = 56;
 const ITEM_HEIGHT = 46;
 const ITEM_WIDTH = 64;
-const ICON_SIZE = 24;
+const ICON_SIZE = 25;
 const AVATAR_SIZE = 32;
 const HORIZONTAL_MARGIN = 20;
-
-export const isLiquidGlassEnabled =
-  Platform.OS === 'ios' && isLiquidGlassAvailable() && isGlassEffectAPIAvailable();
 
 function useNavBottomOffset() {
   const insets = useSafeAreaInsets();
@@ -59,69 +39,29 @@ type BottomNavProps = {
 
 export function BottomNav({ activeTab, onTabPress, avatarUri }: BottomNavProps) {
   const bottom = useNavBottomOffset();
-  const containerStyle = [styles.container, { bottom }];
 
-  const content = (
-    <>
-      <NavSurface style={styles.group}>
-        {LEFT_TABS.map((tab) => (
+  return (
+    <GlassGroup accessibilityRole="tablist" spacing={12} style={[styles.container, { bottom }]}>
+      <GlassSurface style={styles.group}>
+        {LEFT_TABS.map(({ key, label, Icon }) => (
           <TabButton
-            key={tab.key}
-            label={tab.label}
-            active={activeTab === tab.key}
-            onPress={() => onTabPress(tab.key)}>
-            {(color) => (
-              <HugeiconsIcon icon={tab.icon} size={ICON_SIZE} color={color} strokeWidth={1.8} />
-            )}
+            key={key}
+            label={label}
+            active={activeTab === key}
+            onPress={() => onTabPress(key)}>
+            {(color, active) => <Icon size={ICON_SIZE} color={color} active={active} />}
           </TabButton>
         ))}
-      </NavSurface>
+      </GlassSurface>
 
-      <NavSurface style={styles.single}>
+      <GlassSurface style={styles.single}>
         <ProfileButton
           active={activeTab === 'profile'}
           avatarUri={avatarUri}
           onPress={() => onTabPress('profile')}
         />
-      </NavSurface>
-    </>
-  );
-
-  if (isLiquidGlassEnabled) {
-    return (
-      <GlassContainer accessibilityRole="tablist" spacing={12} style={containerStyle}>
-        {content}
-      </GlassContainer>
-    );
-  }
-
-  return (
-    <View accessibilityRole="tablist" style={containerStyle}>
-      {content}
-    </View>
-  );
-}
-
-function NavSurface({ style, children }: { style: StyleProp<ViewStyle>; children: ReactNode }) {
-  const { theme } = useTheme();
-
-  if (isLiquidGlassEnabled) {
-    return (
-      <GlassView isInteractive colorScheme={theme.scheme} style={style}>
-        {children}
-      </GlassView>
-    );
-  }
-
-  return (
-    <View
-      style={[
-        style,
-        styles.fallbackSurface,
-        { backgroundColor: theme.colors.navSurface, borderColor: theme.colors.navBorder },
-      ]}>
-      {children}
-    </View>
+      </GlassSurface>
+    </GlassGroup>
   );
 }
 
@@ -130,7 +70,7 @@ type TabButtonProps = {
   active: boolean;
   onPress: () => void;
   width?: number;
-  children: (color: string) => ReactNode;
+  children: (color: string, active: boolean) => ReactNode;
 };
 
 function TabButton({ label, active, onPress, width = ITEM_WIDTH, children }: TabButtonProps) {
@@ -146,10 +86,10 @@ function TabButton({ label, active, onPress, width = ITEM_WIDTH, children }: Tab
       style={({ pressed }) => [
         styles.item,
         { width },
-        active && { backgroundColor: colors.navActive },
+        active && { backgroundColor: colors.floatingActive },
         pressed && !isLiquidGlassEnabled && styles.pressed,
       ]}>
-      {children(active ? colors.primary : colors.text)}
+      {children(colors.text, active)}
     </Pressable>
   );
 }
@@ -168,7 +108,7 @@ function ProfileButton({ active, avatarUri, onPress }: ProfileButtonProps) {
   if (!showAvatar) {
     return (
       <TabButton label="Profile" active={active} onPress={onPress} width={ITEM_HEIGHT}>
-        {(color) => <HugeiconsIcon icon={UserIcon} size={ICON_SIZE} color={color} strokeWidth={1.8} />}
+        {(color, isActive) => <ProfileIcon size={ICON_SIZE} color={color} active={isActive} />}
       </TabButton>
     );
   }
@@ -182,7 +122,7 @@ function ProfileButton({ active, avatarUri, onPress }: ProfileButtonProps) {
       hitSlop={4}
       style={({ pressed }) => [
         styles.avatarRing,
-        { borderColor: active ? colors.primary : 'transparent' },
+        { borderColor: active ? colors.text : 'transparent' },
         pressed && !isLiquidGlassEnabled && styles.pressed,
       ]}>
       <Image
@@ -216,14 +156,6 @@ const styles = StyleSheet.create({
     borderRadius: BAR_HEIGHT / 2,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  fallbackSurface: {
-    borderWidth: StyleSheet.hairlineWidth,
-    shadowColor: '#000000',
-    shadowOpacity: 0.12,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 8,
   },
   item: {
     height: ITEM_HEIGHT,

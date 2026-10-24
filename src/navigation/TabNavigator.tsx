@@ -1,9 +1,10 @@
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState, type ComponentType } from 'react';
-import { BackHandler, View } from 'react-native';
+import { BackHandler, StyleSheet, View } from 'react-native';
 
 import { BottomNav, type TabKey } from '../components/BottomNav';
 import { useAuthUser } from '../hooks/useAuthUser';
+import { useKeyboardVisible } from '../hooks/useKeyboardVisible';
 import { AIScreen } from '../screens/AIScreen';
 import { HomeScreen } from '../screens/HomeScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
@@ -17,11 +18,19 @@ const SCREENS: Record<TabKey, ComponentType> = {
   profile: ProfileScreen,
 };
 
+const TAB_ORDER: TabKey[] = ['home', 'reports', 'ai', 'profile'];
+
 export function TabNavigator() {
   const { colors } = useTheme().theme;
   const user = useAuthUser();
+  const keyboardVisible = useKeyboardVisible();
   const [activeTab, setActiveTab] = useState<TabKey>('home');
-  const ActiveScreen = SCREENS[activeTab];
+  const [visitedTabs, setVisitedTabs] = useState<ReadonlySet<TabKey>>(() => new Set(['home']));
+
+  const selectTab = (tab: TabKey) => {
+    setActiveTab(tab);
+    setVisitedTabs((prev) => (prev.has(tab) ? prev : new Set(prev).add(tab)));
+  };
 
   useEffect(() => {
     if (activeTab === 'home') {
@@ -38,9 +47,25 @@ export function TabNavigator() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <ActiveScreen />
-      <BottomNav activeTab={activeTab} onTabPress={setActiveTab} avatarUri={user?.photoURL} />
+      {TAB_ORDER.filter((tab) => visitedTabs.has(tab)).map((tab) => {
+        const Screen = SCREENS[tab];
+        return (
+          <View key={tab} style={[StyleSheet.absoluteFill, tab !== activeTab && styles.hidden]}>
+            <Screen />
+          </View>
+        );
+      })}
+
+      {keyboardVisible ? null : (
+        <BottomNav activeTab={activeTab} onTabPress={selectTab} avatarUri={user?.photoURL} />
+      )}
       <StatusBar style={colors.statusBar} />
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  hidden: {
+    display: 'none',
+  },
+});
