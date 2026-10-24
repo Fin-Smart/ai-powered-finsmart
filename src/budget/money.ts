@@ -1,6 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSyncExternalStore } from 'react';
 
+import { onSignOut } from '../lib/session';
+
 const CURRENCY_BY_REGION: Record<string, string> = {
   ZA: 'ZAR',
   US: 'USD',
@@ -42,6 +44,11 @@ AsyncStorage.getItem(CURRENCY_KEY)
     }
   })
   .catch(() => undefined);
+
+onSignOut(() => {
+  preferredCurrency = null;
+  currencyListeners.forEach((listener) => listener());
+});
 
 function regionCurrency() {
   const locale = Intl.NumberFormat().resolvedOptions().locale;

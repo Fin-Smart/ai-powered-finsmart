@@ -1,3 +1,4 @@
+import { onSignOut } from '../lib/session';
 import { allocateIncome } from './income';
 import { formatMoney } from './money';
 import type { BudgetSummary, Income } from './types';
@@ -5,6 +6,11 @@ import type { BudgetSummary, Income } from './types';
 /** Latest budgets and income, kept outside React so Smart Coach can read them when a chat starts. */
 let latest: BudgetSummary[] = [];
 let latestIncome: Income | null = null;
+
+onSignOut(() => {
+  latest = [];
+  latestIncome = null;
+});
 
 export function setCoachBudgets(summaries: BudgetSummary[], income: Income | null) {
   latest = summaries;

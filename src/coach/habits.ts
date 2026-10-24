@@ -1,6 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSyncExternalStore } from 'react';
 
+import { onSignOut } from '../lib/session';
+
 /**
  * A small on-device log of what the person does in FinSmart. Smart Coach reads a summary of it
  * to choose lessons and quiz topics. Nothing here leaves the phone except that summary.
@@ -118,6 +120,14 @@ export function useHabitStats() {
 export function recentQuizQuestions(limit = 30) {
   return log.quiz.slice(-limit).map((result) => result.question);
 }
+
+onSignOut(() => {
+  if (saveTimer) clearTimeout(saveTimer);
+  saveTimer = null;
+  log = { events: [], quiz: [] };
+  shieldSnapshot = { flaggedEmails: 0, flaggedTexts: 0 };
+  changed();
+});
 
 export async function clearHabits() {
   await loaded;

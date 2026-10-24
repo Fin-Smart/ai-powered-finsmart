@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from 'react';
 
 import type { TabKey } from '../components/BottomNav';
+import { onSignOut } from '../lib/session';
 
 /** Where a shortcut wants to go, and what to open once it gets there. */
 export type QuickIntent =
@@ -38,6 +39,12 @@ export function usePendingIntent() {
 }
 
 let activeTab: TabKey = 'home';
+
+onSignOut(() => {
+  pending = null;
+  activeTab = 'home';
+  notify();
+});
 
 /** Called by the tab bar so screens that stay mounted in the background know when they're visible. */
 export function setActiveTab(tab: TabKey) {

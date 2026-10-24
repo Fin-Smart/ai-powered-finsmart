@@ -13,10 +13,14 @@ import { QuickReplies } from '../components/coach/QuickReplies';
 import { QuizCard } from '../components/coach/QuizCard';
 import { ComposeIcon, HistoryIcon } from '../components/icons';
 import { useKeyboardVisible } from '../hooks/useKeyboardVisible';
+import { onSignOut } from '../lib/session';
 import { takeIntent, useActiveTab, usePendingIntent } from '../navigation/quickNav';
 import { useTheme } from '../theme/ThemeProvider';
 
 let autoSessionStarted = false;
+onSignOut(() => {
+  autoSessionStarted = false;
+});
 
 export function AIScreen() {
   const { colors, spacing, typography } = useTheme().theme;

@@ -3,6 +3,7 @@ import { getGenerativeModel, Schema, ThinkingLevel } from '@react-native-firebas
 import { FAST_MODEL, getCoachErrorMessage, isTimeout } from '../coach/smartCoach';
 import { ai } from '../lib/ai';
 import { assertTokensAvailable, recordAiUsage } from '../lib/aiUsage';
+import { onSignOut } from '../lib/session';
 import type { MessageInput, RiskLevel } from './scamDetector';
 
 export type CoachReview = {
@@ -43,6 +44,7 @@ Write for a non-technical reader in plain, calm language. Never tell the user to
 
 /** Reviews already requested this session, so reopening a message doesn't wait again. */
 const reviews = new Map<string, Promise<CoachReview>>();
+onSignOut(() => reviews.clear());
 
 function buildPrompt(message: MessageInput) {
   const text = message.text.replace(/\s+/g, ' ').trim().slice(0, MAX_MESSAGE_CHARS);

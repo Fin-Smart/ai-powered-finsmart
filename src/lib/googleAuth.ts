@@ -6,9 +6,8 @@ import {
 } from '@react-native-firebase/auth';
 import { TurboModuleRegistry } from 'react-native';
 
-import { clearHabits } from '../coach/habits';
-import { clearEmailCache } from '../shield/emailCache';
 import { auth } from './firebase';
+import { clearStoredData, resetSessionMemory } from './session';
 
 type GoogleSignInPackage = typeof import('@react-native-google-signin/google-signin');
 
@@ -51,12 +50,18 @@ export async function signInWithGoogle(): Promise<boolean> {
   return true;
 }
 
+/**
+ * Signs out and removes the account's data from the phone. In-memory caches are wiped first and
+ * Firebase signs out next, so the login screen appears at once; stored data and the Google session
+ * are cleared right after.
+ */
 export async function signOutEverywhere() {
-  await Promise.all([clearEmailCache(), clearHabits()]);
-  if (google) {
-    await google.GoogleSignin.signOut().catch(() => undefined);
-  }
+  resetSessionMemory();
   await firebaseSignOut(auth);
+  await Promise.all([
+    clearStoredData().catch(() => undefined),
+    google?.GoogleSignin.signOut().catch(() => undefined),
+  ]);
 }
 
 /** Confirms the current Firebase user with Google again, for sensitive actions like deleting the account. */
