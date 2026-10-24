@@ -9,6 +9,7 @@ import { useAuthUser } from '../hooks/useAuthUser';
 import { useKeyboardVisible } from '../hooks/useKeyboardVisible';
 import { restoreGoogleSession } from '../lib/googleAuth';
 import { setPendingSmsAction, usePendingSmsAction } from '../shield/smsLaunch';
+import { takeIntent, usePendingIntent } from './quickNav';
 import { AIScreen } from '../screens/AIScreen';
 import { HomeScreen } from '../screens/HomeScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
@@ -53,6 +54,13 @@ export function TabNavigator() {
   useEffect(() => {
     if (pendingSmsAction) selectTab('shield');
   }, [pendingSmsAction]);
+
+  const quickIntent = usePendingIntent();
+  useEffect(() => {
+    if (!quickIntent) return;
+    selectTab(quickIntent.tab);
+    if (quickIntent.tab === 'home') takeIntent('home');
+  }, [quickIntent]);
 
   // Mount Smart Coach in the background once the app has settled, so today's lesson and quiz
   // are prepared before the tab is opened.

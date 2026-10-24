@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Image, Text, View } from 'react-native';
 
 import appConfig from '../../app.json';
@@ -30,6 +30,7 @@ import { errorMessage, toast } from '../components/toast/toastStore';
 import { useAuthUser } from '../hooks/useAuthUser';
 import { deleteAccount, resendVerificationEmail, sendPasswordChangeLink, SignInAgainError, signInMethods } from '../lib/account';
 import { signOutEverywhere } from '../lib/googleAuth';
+import { takeIntent, usePendingIntent } from '../navigation/quickNav';
 import { useTheme, type ThemePreference } from '../theme/ThemeProvider';
 
 const AVATAR_SIZE = 72;
@@ -50,6 +51,15 @@ export function ProfileScreen() {
   const currency = usePreferredCurrency();
   const [sheet, setSheet] = useState<BudgetSheetTarget | null>(null);
   const [incomeOpen, setIncomeOpen] = useState(false);
+
+  const quickIntent = usePendingIntent();
+  useEffect(() => {
+    const open = takeIntent('profile')?.open;
+    if (!open) return;
+    if (open.type === 'budget') setSheet({ mode: 'view', budgetId: open.budgetId, screen: open.screen });
+    else if (open.type === 'newBudget') setSheet({ mode: 'create' });
+    else setIncomeOpen(true);
+  }, [quickIntent]);
   const [busy, setBusy] = useState<BusyAction>(null);
 
   const methods = user ? signInMethods(user) : [];

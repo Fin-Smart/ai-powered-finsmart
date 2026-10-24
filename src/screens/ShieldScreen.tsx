@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, Text, View } from 'react-native';
 
 import { setShieldSnapshot } from '../coach/habits';
+import { takeIntent, usePendingIntent } from '../navigation/quickNav';
 import { ComposeIcon, MailIcon, MessageIcon } from '../components/icons';
 import { Screen } from '../components/Screen';
 import { ComposeSheet } from '../components/shield/ComposeSheet';
@@ -49,6 +50,12 @@ export function ShieldScreen() {
   const [openThread, setOpenThread] = useState<{ threadId: string; address: string } | null>(null);
   const [composeDraft, setComposeDraft] = useState<{ address: string; body: string } | null>(null);
   const [openEmail, setOpenEmail] = useState<GmailMessage | null>(null);
+
+  const quickIntent = usePendingIntent();
+  useEffect(() => {
+    const intent = takeIntent('shield');
+    if (intent?.section) setTab(intent.section);
+  }, [quickIntent]);
 
   useEffect(() => {
     if (!pendingAction) return;

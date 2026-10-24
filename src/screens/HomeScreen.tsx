@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { ActivityIndicator, Text, View } from 'react-native';
 
 import { useBudgets } from '../budget/BudgetsProvider';
@@ -8,16 +8,30 @@ import type { BudgetSummary } from '../budget/types';
 import { useHabitStats } from '../coach/habits';
 import { ActivityRings, type Ring } from '../components/dashboard/ActivityRings';
 import { BudgetLevels } from '../components/dashboard/BudgetLevels';
-import { NotificationsButton } from '../components/dashboard/Notifications';
+import { AlertsSection, NotificationsButton, useAlerts } from '../components/dashboard/Notifications';
 import { useChartColors } from '../components/dashboard/palette';
+import { QuickActions } from '../components/dashboard/QuickActions';
+import { SectionHeader } from '../components/dashboard/SectionHeader';
 import { SpendingDonut, type Slice } from '../components/dashboard/SpendingDonut';
 import { StatTiles } from '../components/dashboard/StatTiles';
 import { StillToPay, type UnpaidItem } from '../components/dashboard/StillToPay';
 import { TokenMeter } from '../components/dashboard/TokenMeter';
 import { WeekChart } from '../components/dashboard/WeekChart';
-import { CoachIcon, EventIcon, ShieldIcon, WalletIcon } from '../components/icons';
+import { dialog } from '../components/dialog/dialogStore';
+import {
+  CoachIcon,
+  EventIcon,
+  MailIcon,
+  MessageIcon,
+  PlusIcon,
+  ShieldIcon,
+  SparkleIcon,
+  WalletIcon,
+} from '../components/icons';
 import { Screen } from '../components/Screen';
+import { toast } from '../components/toast/toastStore';
 import { useAuthUser } from '../hooks/useAuthUser';
+import { navigate } from '../navigation/quickNav';
 import { useTheme } from '../theme/ThemeProvider';
 
 const todayFormat = new Intl.DateTimeFormat(undefined, { weekday: 'long', day: 'numeric', month: 'long' });
@@ -53,7 +67,29 @@ export function HomeScreen() {
   const user = useAuthUser();
   const habits = useHabitStats();
   const { summaries, income, isLoading } = useBudgets();
+  const alerts = useAlerts();
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
   const firstName = user?.displayName?.trim().split(/\s+/)[0];
+
+  const addExpense = () => {
+    if (summaries.length === 0) {
+      toast.info('Create a budget first, then add expenses to it.');
+      navigate({ tab: 'profile', open: { type: 'newBudget' } });
+      return;
+    }
+    const open = (budgetId: string) => navigate({ tab: 'profile', open: { type: 'budget', budgetId, screen: 'expense' } });
+    if (summaries.length === 1) {
+      open(summaries[0].budget.id);
+      return;
+    }
+    dialog.show({
+      title: 'Add expense to',
+      buttons: [
+        ...summaries.map(({ budget }) => ({ label: budget.name, onPress: () => open(budget.id) })),
+        { label: 'Cancel', style: 'cancel' as const },
+      ],
+    });
+  };
 
   // Totals only add up budgets in one currency: the income's, else the first budget's.
   const currency = income?.currency ?? summaries[0]?.budget.currency ?? defaultCurrency();
@@ -111,6 +147,7 @@ export function HomeScreen() {
         if (paidCategoryIds.includes(category.id) || left <= 0) continue;
         items.push({
           id: `${budget.id}:${category.id}`,
+          budgetId: budget.id,
           name: category.name,
           budgetName: budget.name,
           leftCents: left,
@@ -144,7 +181,7 @@ export function HomeScreen() {
     <Screen
       title={firstName ? `Hi, ${firstName}` : 'Home'}
       subtitle={todayFormat.format(now)}
-      accessory={<NotificationsButton />}>
+      accessory={<NotificationsButton alerts={alerts} open={notificationsOpen} onOpenChange={setNotificationsOpen} />}>
       <View style={{ gap: spacing.xl, marginTop: spacing.lg }}>
         <View style={{ gap: spacing.md, padding: spacing.lg, borderRadius: radius.xl, backgroundColor: colors.surface }}>
           <View style={{ gap: 2 }}>
@@ -176,6 +213,42 @@ export function HomeScreen() {
           </View>
         </View>
 
+        <View>
+          <SectionHeader title="Quick actions" />
+          <QuickActions
+            actions={[
+              { label: 'Add expense', Icon: PlusIcon, color: chart.blue, onPress: addExpense },
+              {
+                label: 'New budget',
+                Icon: WalletIcon,
+                color: chart.purple,
+                onPress: () => navigate({ tab: 'profile', open: { type: 'newBudget' } }),
+              },
+              {
+                label: 'Check emails',
+                Icon: MailIcon,
+                color: chart.orange,
+                onPress: () => navigate({ tab: 'shield', section: 'email' }),
+              },
+              {
+                label: 'Check a text',
+                Icon: MessageIcon,
+                color: chart.green,
+                onPress: () => navigate({ tab: 'shield', section: 'sms' }),
+              },
+              { label: 'Ask Coach', Icon: CoachIcon, color: chart.teal, onPress: () => navigate({ tab: 'ai' }) },
+              {
+                label: 'Quiz me',
+                Icon: SparkleIcon,
+                color: chart.pink,
+                onPress: () => navigate({ tab: 'ai', start: 'quiz' }),
+              },
+            ]}
+          />
+        </View>
+
+        <AlertsSection alerts={alerts} onSeeAll={() => setNotificationsOpen(true)} />
+
         <ActivityRings rings={rings} />
 
         <StatTiles
@@ -186,6 +259,7 @@ export function HomeScreen() {
               label: 'Safe to spend a day',
               value: formatMoney(perDayCents, currency),
               detail: leftCents > 0 ? 'to stay on budget' : 'nothing left this month',
+              onPress: () => navigate({ tab: 'profile' }),
             },
             {
               Icon: EventIcon,
@@ -200,6 +274,7 @@ export function HomeScreen() {
               label: 'Flagged by Shield',
               value: String(habits.shieldFlagged),
               detail: `${habits.scamChecks} ${habits.scamChecks === 1 ? 'check' : 'checks'} this month`,
+              onPress: () => navigate({ tab: 'shield', section: 'email' }),
             },
             {
               Icon: CoachIcon,
@@ -207,6 +282,7 @@ export function HomeScreen() {
               label: habits.lessons === 1 ? 'Lesson' : 'Lessons',
               value: String(habits.lessons),
               detail: `${habits.quizAnswered} quiz ${habits.quizAnswered === 1 ? 'answer' : 'answers'}`,
+              onPress: () => navigate({ tab: 'ai', start: 'lesson' }),
             },
           ]}
         />

@@ -1,5 +1,5 @@
 import type { ComponentType } from 'react';
-import { Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 
 import { useTheme } from '../../theme/ThemeProvider';
 import type { IconProps } from '../icons';
@@ -11,6 +11,7 @@ export type StatTile = {
   label: string;
   value: string;
   detail?: string;
+  onPress?: () => void;
 };
 
 /** A two-column grid of Control Center–style tiles: tinted icon, big value, short caption. */
@@ -20,18 +21,20 @@ export function StatTiles({ tiles }: { tiles: StatTile[] }) {
   return (
     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm + 4 }}>
       {tiles.map((tile) => (
-        <View
+        <Pressable
           key={tile.label}
-          accessible
+          accessibilityRole={tile.onPress ? 'button' : 'text'}
           accessibilityLabel={[tile.label, tile.value, tile.detail].filter(Boolean).join(', ')}
-          style={{
+          disabled={!tile.onPress}
+          onPress={tile.onPress}
+          style={({ pressed }) => ({
             flexBasis: '47%',
             flexGrow: 1,
             gap: spacing.sm + 2,
             padding: spacing.md,
             borderRadius: radius.xl,
-            backgroundColor: colors.surface,
-          }}>
+            backgroundColor: pressed ? colors.fill : colors.surface,
+          })}>
           <View
             style={{
               width: 38,
@@ -59,7 +62,7 @@ export function StatTiles({ tiles }: { tiles: StatTile[] }) {
               </Text>
             ) : null}
           </View>
-        </View>
+        </Pressable>
       ))}
     </View>
   );

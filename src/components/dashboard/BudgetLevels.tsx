@@ -1,8 +1,9 @@
 import type { ComponentType } from 'react';
-import { ScrollView, Text, useWindowDimensions, View } from 'react-native';
+import { Pressable, ScrollView, Text, useWindowDimensions, View } from 'react-native';
 
 import { formatMoney } from '../../budget/money';
 import type { BudgetSummary } from '../../budget/types';
+import { navigate } from '../../navigation/quickNav';
 import { useTheme } from '../../theme/ThemeProvider';
 import {
   BusinessIcon,
@@ -44,7 +45,7 @@ export function BudgetLevels({ summaries }: { summaries: BudgetSummary[] }) {
 
   return (
     <View>
-      <SectionHeader title="Budgets" accessory="Spent so far" />
+      <SectionHeader title="Budgets" accessory="Tap to open" />
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -59,7 +60,12 @@ export function BudgetLevels({ summaries }: { summaries: BudgetSummary[] }) {
             : `${formatMoney(remainingCents, budget.currency)} left`;
 
           return (
-            <View key={budget.id} style={{ width, gap: spacing.sm }}>
+            <Pressable
+              key={budget.id}
+              accessibilityRole="button"
+              accessibilityHint="Opens this budget"
+              onPress={() => navigate({ tab: 'profile', open: { type: 'budget', budgetId: budget.id } })}
+              style={({ pressed }) => ({ width, gap: spacing.sm, transform: [{ scale: pressed ? 0.96 : 1 }] })}>
               <ControlSlider
                 value={used}
                 width={width}
@@ -84,7 +90,7 @@ export function BudgetLevels({ summaries }: { summaries: BudgetSummary[] }) {
                   {caption}
                 </Text>
               </View>
-            </View>
+            </Pressable>
           );
         })}
       </ScrollView>

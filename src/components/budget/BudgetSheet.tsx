@@ -28,7 +28,9 @@ import { ExpenseForm } from './ExpenseForm';
 import { PlannerPanel } from './PlannerPanel';
 import { ProgressBar } from './ProgressBar';
 
-export type BudgetSheetTarget = { mode: 'create' } | { mode: 'view'; budgetId: string };
+export type BudgetSheetTarget =
+  | { mode: 'create' }
+  | { mode: 'view'; budgetId: string; /** Opens straight to the expense form. */ screen?: 'expense' };
 
 type Screen = { name: 'view' } | { name: 'edit' } | { name: 'plan' } | { name: 'expense'; transaction?: BudgetTransaction };
 
@@ -39,7 +41,7 @@ export function BudgetSheet({ target, onClose }: { target: BudgetSheetTarget | n
   const [createdId, setCreatedId] = useState<string | null>(null);
 
   useEffect(() => {
-    setScreen({ name: 'view' });
+    setScreen(target?.mode === 'view' && target.screen === 'expense' ? { name: 'expense' } : { name: 'view' });
     setCreatedId(null);
   }, [target]);
 

@@ -13,6 +13,7 @@ import { QuickReplies } from '../components/coach/QuickReplies';
 import { QuizCard } from '../components/coach/QuizCard';
 import { ComposeIcon, HistoryIcon } from '../components/icons';
 import { useKeyboardVisible } from '../hooks/useKeyboardVisible';
+import { takeIntent, usePendingIntent } from '../navigation/quickNav';
 import { useTheme } from '../theme/ThemeProvider';
 
 let autoSessionStarted = false;
@@ -48,6 +49,13 @@ export function AIScreen() {
     autoSessionStarted = true;
     void startSession({ silent: true });
   }, [startSession]);
+
+  const quickIntent = usePendingIntent();
+  useEffect(() => {
+    const intent = takeIntent('ai');
+    if (intent?.start === 'quiz') void startQuiz();
+    else if (intent?.start === 'lesson') void startSession();
+  }, [quickIntent, startQuiz, startSession]);
 
   const visibleMessages = useMemo(() => messages.filter((message) => !message.hidden), [messages]);
   const isEmpty = visibleMessages.length === 0;
