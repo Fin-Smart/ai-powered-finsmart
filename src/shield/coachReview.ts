@@ -1,6 +1,6 @@
 import { getGenerativeModel, Schema, ThinkingLevel } from '@react-native-firebase/ai';
 
-import { getCoachErrorMessage } from '../coach/smartCoach';
+import { FAST_MODEL, getCoachErrorMessage, isTimeout } from '../coach/smartCoach';
 import { ai } from '../lib/ai';
 import type { MessageInput, RiskLevel } from './scamDetector';
 
@@ -11,13 +11,12 @@ export type CoachReview = {
 };
 
 /** Flash-Lite with low thinking: a scam verdict is a quick classification, not a long answer. */
-const REVIEW_MODEL = 'gemini-3.5-flash-lite';
 /** Scam signals appear early; long newsletters otherwise dominate the request time. */
 const MAX_MESSAGE_CHARS = 2500;
 const REVIEW_TIMEOUT_MS = 20_000;
 
 const reviewModel = getGenerativeModel(ai, {
-  model: REVIEW_MODEL,
+  model: FAST_MODEL,
   systemInstruction: `You are Smart Coach, the scam-awareness coach in the FinSmart app.
 You review one SMS or email that a user is unsure about and decide whether it is a financial scam.
 Judge only from the message content, sender and links. Common scams: advance-fee ("you won R1000, pay R200 to claim"), fake bank/SARS/SASSA/courier messages, requests for OTPs/PINs/passwords/card details, fake investments, and payment by gift card, airtime or crypto.
@@ -61,7 +60,7 @@ async function requestReview(prompt: string): Promise<CoachReview> {
     const result = await reviewModel.generateContent(prompt, { timeout: REVIEW_TIMEOUT_MS });
     return JSON.parse(result.response.text()) as CoachReview;
   } catch (error) {
-    if (error instanceof Error && /timeout|aborted/i.test(`${error.name} ${error.message}`)) {
+    if (isTimeout(error)) {
       throw new Error('Smart Coach is taking too long. Please try again.');
     }
     throw new Error(getCoachErrorMessage(error));

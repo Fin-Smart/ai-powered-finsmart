@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react';
-import { KeyboardAvoidingView, Pressable, ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type { BudgetPlan } from '../../budget/budgetPlanner';
 import {
   addTransaction,
+  budgetErrorMessage,
   createBudget,
   deleteBudget,
   deleteTransaction,
+  newBudgetId,
   updateBudget,
   updateTransaction,
 } from '../../budget/budgetRepo';
@@ -18,7 +20,7 @@ import type { BudgetDraft, BudgetSummary, BudgetTransaction, TransactionDraft } 
 import { useTheme } from '../../theme/ThemeProvider';
 import { dialog } from '../dialog/dialogStore';
 import { Sheet } from '../Sheet';
-import { errorMessage, toast } from '../toast/toastStore';
+import { toast } from '../toast/toastStore';
 import { BudgetForm, newCategoryId } from './BudgetForm';
 import { ExpenseForm } from './ExpenseForm';
 import { PlannerPanel } from './PlannerPanel';
@@ -29,6 +31,7 @@ export type BudgetSheetTarget = { mode: 'create' } | { mode: 'view'; budgetId: s
 type Screen = { name: 'view' } | { name: 'edit' } | { name: 'plan' } | { name: 'expense'; transaction?: BudgetTransaction };
 
 export function BudgetSheet({ target, onClose }: { target: BudgetSheetTarget | null; onClose: () => void }) {
+  const { colors, spacing } = useTheme().theme;
   const { uid, summaries } = useBudgets();
   const [screen, setScreen] = useState<Screen>({ name: 'view' });
   const [createdId, setCreatedId] = useState<string | null>(null);
@@ -54,33 +57,34 @@ export function BudgetSheet({ target, onClose }: { target: BudgetSheetTarget | n
             : 'Add expense'
           : (summary?.budget.name ?? 'Budget');
 
-  const run = async (task: () => Promise<unknown>, success: string, failure: string) => {
-    try {
-      await task();
-      toast.success(success);
-      return true;
-    } catch (error) {
-      toast.error(errorMessage(error, failure));
-      return false;
-    }
+  /**
+   * Firestore applies writes locally and the live listeners update straight away, but the promise
+   * only settles once the server confirms. So the UI moves on now and reports the outcome later.
+   */
+  const sync = (task: Promise<unknown>, success: string, failure: string, onFailure?: () => void) => {
+    task.then(
+      () => toast.success(success),
+      (error) => {
+        onFailure?.();
+        toast.error(budgetErrorMessage(error, failure));
+      },
+    );
   };
 
   const create = async (draft: BudgetDraft) => {
     if (!uid) return;
-    try {
-      setCreatedId(await createBudget(uid, draft));
-      setScreen({ name: 'view' });
-      toast.success('Budget created');
-    } catch (error) {
-      toast.error(errorMessage(error, "Couldn't create the budget. Please try again."));
-    }
+    const id = newBudgetId(uid);
+    setCreatedId(id);
+    setScreen({ name: 'view' });
+    sync(createBudget(uid, id, draft), 'Budget created', "Couldn't create the budget. Please try again.", () =>
+      setCreatedId((current) => (current === id ? null : current)),
+    );
   };
 
   const save = async (draft: BudgetDraft) => {
     if (!uid || !summary) return;
-    if (await run(() => updateBudget(uid, summary.budget.id, draft), 'Budget saved', "Couldn't save the budget.")) {
-      setScreen({ name: 'view' });
-    }
+    setScreen({ name: 'view' });
+    sync(updateBudget(uid, summary.budget.id, draft), 'Budget saved', "Couldn't save the budget. Please try again.");
   };
 
   const remove = async () => {
@@ -91,33 +95,32 @@ export function BudgetSheet({ target, onClose }: { target: BudgetSheetTarget | n
       confirmLabel: 'Delete',
       destructive: true,
     });
-    if (confirmed && (await run(() => deleteBudget(uid, summary.budget.id), 'Budget deleted', "Couldn't delete the budget."))) {
-      onClose();
-    }
+    if (!confirmed) return;
+    onClose();
+    sync(deleteBudget(uid, summary.budget.id), 'Budget deleted', "Couldn't delete the budget. Please try again.");
   };
 
   const saveTransaction = async (draft: TransactionDraft, existing?: BudgetTransaction) => {
     if (!uid || !summary) return;
-    const ok = await run(
-      () =>
-        existing
-          ? updateTransaction(uid, summary.budget.id, existing.id, draft)
-          : addTransaction(uid, summary.budget.id, draft),
+    setScreen({ name: 'view' });
+    sync(
+      existing
+        ? updateTransaction(uid, summary.budget.id, existing.id, draft)
+        : addTransaction(uid, summary.budget.id, draft),
       existing ? 'Entry updated' : draft.direction === 'out' ? 'Expense added' : 'Money in added',
-      "Couldn't save this entry.",
+      "Couldn't save this entry. Please try again.",
     );
-    if (ok) setScreen({ name: 'view' });
   };
 
   const removeTransaction = async (transaction: BudgetTransaction) => {
     if (!uid || !summary) return;
     const confirmed = await dialog.confirm({ title: 'Delete this entry?', confirmLabel: 'Delete', destructive: true });
-    if (confirmed && (await run(() => deleteTransaction(uid, summary.budget.id, transaction.id), 'Entry deleted', "Couldn't delete this entry."))) {
-      setScreen({ name: 'view' });
-    }
+    if (!confirmed) return;
+    setScreen({ name: 'view' });
+    sync(deleteTransaction(uid, summary.budget.id, transaction.id), 'Entry deleted', "Couldn't delete this entry. Please try again.");
   };
 
-  const applyPlan = async (plan: BudgetPlan) => {
+  const applyPlan = (plan: BudgetPlan) => {
     if (!uid || !summary) return;
     const categories = plan.categories.map((item) => ({
       id:
@@ -126,9 +129,8 @@ export function BudgetSheet({ target, onClose }: { target: BudgetSheetTarget | n
       name: item.name,
       limitCents: item.limitCents,
     }));
-    if (await run(() => updateBudget(uid, summary.budget.id, { categories }), 'Plan applied', "Couldn't apply the plan.")) {
-      setScreen({ name: 'view' });
-    }
+    setScreen({ name: 'view' });
+    sync(updateBudget(uid, summary.budget.id, { categories }), 'Plan applied', "Couldn't apply the plan. Please try again.");
   };
 
   return (
@@ -137,7 +139,9 @@ export function BudgetSheet({ target, onClose }: { target: BudgetSheetTarget | n
         <SheetBody>
           {creating ? (
             <BudgetForm onSubmit={create} />
-          ) : !summary ? null : screen.name === 'edit' ? (
+          ) : !summary ? (
+            <ActivityIndicator color={colors.textMuted} style={{ paddingVertical: spacing.xxl }} />
+          ) : screen.name === 'edit' ? (
             <>
               <BackLink onPress={() => setScreen({ name: 'view' })} />
               <BudgetForm initial={summary.budget} onSubmit={save} onDelete={remove} />
@@ -156,7 +160,7 @@ export function BudgetSheet({ target, onClose }: { target: BudgetSheetTarget | n
                   limitCents: category.limitCents,
                   spentCents: summary.spentByCategory[category.id] ?? 0,
                 }))}
-                onApply={(plan) => void applyPlan(plan)}
+                onApply={applyPlan}
               />
             </>
           ) : screen.name === 'expense' ? (

@@ -4,6 +4,8 @@ import { budgetContextForCoach } from '../budget/coachContext';
 import { ai } from '../lib/ai';
 
 export const COACH_MODEL = 'gemini-3.8-flash';
+/** For structured one-shot tasks (scam reviews, budget plans) where speed matters more than depth. */
+export const FAST_MODEL = 'gemini-3.5-flash-lite';
 
 const SYSTEM_INSTRUCTION = `You are Smart Coach, the friendly personal finance teacher inside the FinSmart app.
 
@@ -48,6 +50,10 @@ export const COACH_SUGGESTIONS = [
   "What's the difference between saving and investing?",
 ] as const;
 
+export function isTimeout(error: unknown) {
+  return error instanceof Error && /timeout|timed out|abort/i.test(`${error.name} ${error.message}`);
+}
+
 export function getCoachErrorMessage(error: unknown) {
   if (error instanceof AIError) {
     const status = error.customErrorData?.status;
@@ -61,7 +67,10 @@ export function getCoachErrorMessage(error: unknown) {
       return "I can't connect right now. Smart Coach isn't fully set up yet.";
     }
     if (code === 'fetch-error') {
-      return "I couldn't reach the server. Check your internet connection and try again.";
+      // Request timeouts abort the fetch, which the SDK also reports as a fetch error.
+      return isTimeout(error)
+        ? "I'm taking too long to answer. Please try again."
+        : "I couldn't reach the server. Check your internet connection and try again.";
     }
     if (code === 'response-error') {
       return "I can't help with that one. Try asking about budgeting, saving, debt or investing basics.";

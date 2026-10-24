@@ -7,6 +7,7 @@ import {
   onSnapshot,
   orderBy,
   query,
+  setDoc,
   updateDoc,
   where,
   writeBatch,
@@ -44,10 +45,32 @@ export function subscribeTransactions(
   );
 }
 
-export async function createBudget(uid: string, draft: BudgetDraft) {
+/** IDs are made on the phone so a new budget can be shown before the server confirms it. */
+export function newBudgetId(uid: string) {
+  return doc(budgetsRef(uid)).id;
+}
+
+export function createBudget(uid: string, budgetId: string, draft: BudgetDraft) {
   const now = Date.now();
-  const created = await addDoc(budgetsRef(uid), { ...draft, createdAt: now, updatedAt: now });
-  return created.id;
+  return setDoc(doc(budgetsRef(uid), budgetId), { ...draft, createdAt: now, updatedAt: now });
+}
+
+/** Friendly text for Firestore failures; `fallback` describes what was being attempted. */
+export function budgetErrorMessage(error: unknown, fallback: string) {
+  const code = typeof error === 'object' && error !== null && 'code' in error ? String(error.code) : '';
+  if (code.endsWith('permission-denied') || code.endsWith('unauthenticated')) {
+    return "FinSmart isn't allowed to access your budgets right now. Sign out and back in, then try again.";
+  }
+  if (code.endsWith('unavailable') || code.endsWith('deadline-exceeded')) {
+    return "You're offline. Your budgets will update when you're back online.";
+  }
+  if (code.endsWith('not-found')) {
+    return 'This budget no longer exists.';
+  }
+  if (code.endsWith('resource-exhausted')) {
+    return 'Too many changes at once. Wait a moment and try again.';
+  }
+  return fallback;
 }
 
 export function updateBudget(uid: string, budgetId: string, patch: Partial<BudgetDraft>) {

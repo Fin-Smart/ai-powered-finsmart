@@ -1,6 +1,6 @@
-import { getGenerativeModel, Schema, ThinkingLevel } from '@react-native-firebase/ai';
+import { AIError, getGenerativeModel, Schema, ThinkingLevel } from '@react-native-firebase/ai';
 
-import { COACH_MODEL, getCoachErrorMessage } from '../coach/smartCoach';
+import { FAST_MODEL, getCoachErrorMessage, isTimeout } from '../coach/smartCoach';
 import { ai } from '../lib/ai';
 import { formatMoney } from './money';
 import type { BudgetKind } from './types';
@@ -19,8 +19,10 @@ type PlanRequest = {
   current: { name: string; limitCents: number; spentCents: number }[];
 };
 
+const PLAN_TIMEOUT_MS = 45_000;
+
 const plannerModel = getGenerativeModel(ai, {
-  model: COACH_MODEL,
+  model: FAST_MODEL,
   systemInstruction: `You are Smart Coach in the FinSmart app, helping a beginner plan a budget.
 Split the money available into 4-9 practical categories with whole-number amounts in the user's currency.
 The amounts must add up to no more than the money available. For monthly budgets include an emergency fund or savings category unless money is very tight.
@@ -61,8 +63,17 @@ export async function planBudget(request: PlanRequest): Promise<BudgetPlan> {
     .filter(Boolean)
     .join('\n');
 
+  const generate = () => plannerModel.generateContent(prompt, { timeout: PLAN_TIMEOUT_MS });
+
   try {
-    const result = await plannerModel.generateContent(prompt, { timeout: 30_000 });
+    let result: Awaited<ReturnType<typeof generate>>;
+    try {
+      result = await generate();
+    } catch (error) {
+      // One quiet retry for dropped connections; quota and setup errors won't fix themselves.
+      if (!(error instanceof AIError) || (error.code as string) !== 'fetch-error' || isTimeout(error)) throw error;
+      result = await generate();
+    }
     const raw = JSON.parse(result.response.text()) as {
       categories: { name: string; amount: number; reason: string }[];
       tips: string[];
