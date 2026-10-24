@@ -5,18 +5,16 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../theme/ThemeProvider';
 import { GlassSurface } from '../GlassSurface';
 import { AlertIcon, CheckIcon, InfoIcon } from '../icons';
-import { toast, useCurrentToast, useIsTopViewport, type Toast } from './toastStore';
+import { toast, useCurrentToast, type Toast } from './toastStore';
 
 const HIDDEN_OFFSET = -180;
 const SWIPE_DISMISS_DISTANCE = 24;
 
-/** Renders the current toast. Mount once at the root and once inside every native modal. */
-export function ToastViewport({ topOffset }: { topOffset?: number }) {
+export function ToastLayer({ topOffset }: { topOffset?: number }) {
   const insets = useSafeAreaInsets();
-  const isTop = useIsTopViewport();
   const current = useCurrentToast();
 
-  if (!isTop || !current) return null;
+  if (!current) return null;
   return <ToastCard key={current.id} item={current} top={topOffset ?? insets.top + 8} />;
 }
 

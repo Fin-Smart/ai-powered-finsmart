@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react';
-import { Alert, FlatList, Modal, Platform, Pressable, Text, View } from 'react-native';
+import { FlatList, Modal, Platform, Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { deleteConversation, loadConversations, type Conversation } from '../../coach/chatHistory';
 import { formatWhen } from '../../lib/formatWhen';
 import { useTheme } from '../../theme/ThemeProvider';
+import { dialog } from '../dialog/dialogStore';
 import { HistoryIcon } from '../icons';
 import { errorMessage, toast } from '../toast/toastStore';
-import { ToastViewport } from '../toast/ToastViewport';
+import { OverlayViewport } from '../overlay/OverlayViewport';
 
 type HistorySheetProps = {
   visible: boolean;
@@ -35,24 +36,23 @@ export function HistorySheet({ visible, activeConversationId, onClose, onSelect,
     };
   }, [visible]);
 
-  const confirmDelete = (conversation: Conversation) => {
-    Alert.alert('Delete this chat?', conversation.title, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await deleteConversation(conversation.id);
-            setConversations((prev) => prev?.filter((item) => item.id !== conversation.id) ?? null);
-            onDeleted(conversation.id);
-            toast.success('Chat deleted');
-          } catch (error) {
-            toast.error(errorMessage(error, "Couldn't delete this chat. Please try again."));
-          }
-        },
-      },
-    ]);
+  const confirmDelete = async (conversation: Conversation) => {
+    const confirmed = await dialog.confirm({
+      title: 'Delete this chat?',
+      message: conversation.title,
+      confirmLabel: 'Delete',
+      destructive: true,
+    });
+    if (!confirmed) return;
+
+    try {
+      await deleteConversation(conversation.id);
+      setConversations((prev) => prev?.filter((item) => item.id !== conversation.id) ?? null);
+      onDeleted(conversation.id);
+      toast.success('Chat deleted');
+    } catch (error) {
+      toast.error(errorMessage(error, "Couldn't delete this chat. Please try again."));
+    }
   };
 
   return (
@@ -144,7 +144,7 @@ export function HistorySheet({ visible, activeConversationId, onClose, onSelect,
                   accessibilityRole="button"
                   accessibilityHint="Opens this chat. Long-press to delete."
                   onPress={() => onSelect(item)}
-                  onLongPress={() => confirmDelete(item)}
+                  onLongPress={() => void confirmDelete(item)}
                   style={({ pressed }) => ({
                     flexDirection: 'row',
                     gap: spacing.md,
@@ -188,7 +188,7 @@ export function HistorySheet({ visible, activeConversationId, onClose, onSelect,
             }}
           />
         )}
-        <ToastViewport topOffset={Platform.OS === 'android' ? insets.top + spacing.sm : spacing.sm + 4} />
+        <OverlayViewport topOffset={Platform.OS === 'android' ? insets.top + spacing.sm : spacing.sm + 4} />
       </View>
     </Modal>
   );

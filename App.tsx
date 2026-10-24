@@ -9,7 +9,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import './src/lib/firebase';
-import { ToastViewport } from './src/components/toast/ToastViewport';
+import { OverlayViewport } from './src/components/overlay/OverlayViewport';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { ThemeProvider } from './src/theme/ThemeProvider';
 
@@ -31,7 +31,7 @@ export default function App() {
     <SafeAreaProvider>
       <ThemeProvider>
         <RootNavigator />
-        <ToastViewport />
+        <OverlayViewport />
       </ThemeProvider>
     </SafeAreaProvider>
   );

@@ -1,4 +1,4 @@
-import { useEffect, useState, useSyncExternalStore } from 'react';
+import { useSyncExternalStore } from 'react';
 
 export type ToastKind = 'success' | 'error' | 'info';
 
@@ -57,33 +57,4 @@ export const toast = {
 
 export function useCurrentToast() {
   return useSyncExternalStore(subscribe, () => current);
-}
-
-/**
- * Native modals draw above the root view, so each modal mounts its own viewport and only the most
- * recently mounted one renders the toast.
- */
-let viewports: number[] = [];
-let nextViewportId = 1;
-const viewportListeners = new Set<() => void>();
-const notifyViewports = () => viewportListeners.forEach((listener) => listener());
-
-function subscribeViewports(listener: () => void) {
-  viewportListeners.add(listener);
-  return () => viewportListeners.delete(listener);
-}
-
-export function useIsTopViewport() {
-  const [id] = useState(() => nextViewportId++);
-
-  useEffect(() => {
-    viewports = [...viewports, id];
-    notifyViewports();
-    return () => {
-      viewports = viewports.filter((viewport) => viewport !== id);
-      notifyViewports();
-    };
-  }, [id]);
-
-  return useSyncExternalStore(subscribeViewports, () => viewports[viewports.length - 1] === id);
 }
