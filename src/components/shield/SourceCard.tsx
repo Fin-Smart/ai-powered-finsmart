@@ -1,5 +1,5 @@
 import type { ComponentType } from 'react';
-import { ActivityIndicator, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, Switch, Text, View } from 'react-native';
 
 import { useTheme } from '../../theme/ThemeProvider';
 import type { IconProps } from '../icons';
@@ -11,9 +11,11 @@ type SourceCardProps = {
   status: string;
   footnote?: string;
   action?: { label: string; onPress: () => void; busy?: boolean };
+  /** Replaces the status text with an on/off switch. */
+  toggle?: { value: boolean; onValueChange: (value: boolean) => void };
 };
 
-export function SourceCard({ Icon, title, description, status, footnote, action }: SourceCardProps) {
+export function SourceCard({ Icon, title, description, status, footnote, action, toggle }: SourceCardProps) {
   const { colors, spacing, typography, radius } = useTheme().theme;
 
   return (
@@ -41,14 +43,25 @@ export function SourceCard({ Icon, title, description, status, footnote, action 
           }}>
           {title}
         </Text>
-        <Text
-          style={{
-            color: colors.textMuted,
-            fontFamily: typography.fontFamily.medium,
-            fontSize: typography.fontSize.xs,
-          }}>
-          {status}
-        </Text>
+        {toggle ? (
+          <Switch
+            accessibilityLabel={`${title} checks`}
+            value={toggle.value}
+            onValueChange={toggle.onValueChange}
+            trackColor={{ false: colors.border, true: colors.primary }}
+            thumbColor={Platform.OS === 'android' ? colors.onPrimary : undefined}
+            ios_backgroundColor={colors.border}
+          />
+        ) : (
+          <Text
+            style={{
+              color: colors.textMuted,
+              fontFamily: typography.fontFamily.medium,
+              fontSize: typography.fontSize.xs,
+            }}>
+            {status}
+          </Text>
+        )}
       </View>
 
       <Text

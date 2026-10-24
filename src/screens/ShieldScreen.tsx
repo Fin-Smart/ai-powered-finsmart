@@ -24,6 +24,7 @@ const GMAIL_STATUS_LABEL: Record<GmailStatus, string> = {
   unavailable: 'Needs app build',
   signedOut: 'Not connected',
   needsAccess: 'Not connected',
+  paused: 'Off',
   loading: 'Checking…',
   ready: 'On',
   error: "Couldn't load",
@@ -110,10 +111,8 @@ export function ShieldScreen() {
 
   return (
     <Screen title="Shield" subtitle="Spot money scams in your texts and emails.">
-      <Text accessibilityRole="header" style={sectionTitle}>
-        Protection
-      </Text>
-      <View style={{ gap: spacing.sm + 2 }}>
+      
+      <View style={{ gap: spacing.sm + 2, marginTop: spacing.lg }}>
         {Platform.OS === 'android' ? (
           <SourceCard
             Icon={MessageIcon}
@@ -128,6 +127,11 @@ export function ShieldScreen() {
           status={GMAIL_STATUS_LABEL[gmail.status]}
           description="Sign in with Google and Shield scans your inbox for fake banks, prize scams and payment requests. Emails are checked on your phone."
           action={gmailAction}
+          toggle={
+            gmail.status === 'ready' || gmail.status === 'loading' || gmail.status === 'paused' || gmail.status === 'error'
+              ? { value: gmail.enabled, onValueChange: (value) => void gmail.setEnabled(value) }
+              : undefined
+          }
           footnote={gmail.status === 'unavailable' ? 'Install the FinSmart app build to use this. It isn’t available in Expo Go.' : undefined}
         />
         {Platform.OS === 'ios' ? (
