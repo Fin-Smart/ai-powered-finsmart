@@ -54,7 +54,7 @@ export function AuthLayout({ title, subtitle, compact, onBack, footer, children 
           contentContainerStyle={{ flexGrow: 1, paddingBottom: insets.bottom + spacing.lg }}>
           <View
             style={{
-              height: heroHeight,
+              height: heroHeight - 50,
               backgroundColor: colors.background,
               paddingTop: insets.top + spacing.md,
               alignItems: 'center',

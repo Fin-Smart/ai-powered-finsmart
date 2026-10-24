@@ -125,16 +125,7 @@ export function RegisterScreen({ initialEmail, onBack, onLogIn }: RegisterScreen
       <FormError message={error} />
       <PrimaryButton label="Create account" onPress={submit} busy={busy === 'email'} />
 
-      <Text
-        style={{
-          textAlign: 'center',
-          color: colors.textMuted,
-          fontFamily: typography.fontFamily.regular,
-          fontSize: typography.fontSize.xs,
-          lineHeight: 17,
-        }}>
-        We'll send a link to verify your email. FinSmart teaches general money skills and isn't personal financial advice.
-      </Text>
+     
     </AuthLayout>
   );
 }
