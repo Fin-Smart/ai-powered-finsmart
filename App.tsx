@@ -7,9 +7,10 @@ import {
 } from '@expo-google-fonts/poppins';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import './src/lib/firebase';
-import { HomeScreen } from './src/screens/HomeScreen';
+import { TabNavigator } from './src/navigation/TabNavigator';
 import { ThemeProvider } from './src/theme/ThemeProvider';
 
 SplashScreen.preventAutoHideAsync();
@@ -33,8 +34,10 @@ export default function App() {
   }
 
   return (
-    <ThemeProvider>
-      <HomeScreen />
-    </ThemeProvider>
+    <SafeAreaProvider>
+      <ThemeProvider>
+        <TabNavigator />
+      </ThemeProvider>
+    </SafeAreaProvider>
   );
 }
