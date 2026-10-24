@@ -6,6 +6,7 @@ import {
 } from '@react-native-firebase/auth';
 import { TurboModuleRegistry } from 'react-native';
 
+import { clearHabits } from '../coach/habits';
 import { clearEmailCache } from '../shield/emailCache';
 import { auth } from './firebase';
 
@@ -51,7 +52,7 @@ export async function signInWithGoogle(): Promise<boolean> {
 }
 
 export async function signOutEverywhere() {
-  await clearEmailCache();
+  await Promise.all([clearEmailCache(), clearHabits()]);
   if (google) {
     await google.GoogleSignin.signOut().catch(() => undefined);
   }

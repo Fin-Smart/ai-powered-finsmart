@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { FlatList, KeyboardAvoidingView, Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -10,22 +10,54 @@ import { Composer } from '../components/coach/Composer';
 import { HistorySheet } from '../components/coach/HistorySheet';
 import { MessageBubble } from '../components/coach/MessageBubble';
 import { QuickReplies } from '../components/coach/QuickReplies';
+import { QuizCard } from '../components/coach/QuizCard';
 import { ComposeIcon, HistoryIcon } from '../components/icons';
 import { useKeyboardVisible } from '../hooks/useKeyboardVisible';
 import { useTheme } from '../theme/ThemeProvider';
+
+let autoSessionStarted = false;
 
 export function AIScreen() {
   const { colors, spacing, typography } = useTheme().theme;
   const insets = useSafeAreaInsets();
   const bottomNavInset = useBottomNavInset();
   const keyboardVisible = useKeyboardVisible();
-  const { messages, isResponding, conversationId, send, stop, reset, openConversation } = useSmartCoach();
+  const {
+    messages,
+    isResponding,
+    isPreparingQuiz,
+    quizProgress,
+    conversationId,
+    send,
+    stop,
+    reset,
+    openConversation,
+    startSession,
+    startQuiz,
+    answerQuiz,
+    endQuiz,
+  } = useSmartCoach();
   const [draft, setDraft] = useState('');
   const [composerHeight, setComposerHeight] = useState(0);
   const [historyVisible, setHistoryVisible] = useState(false);
 
-  const isEmpty = messages.length === 0;
-  const newestFirst = useMemo(() => [...messages].reverse(), [messages]);
+  // The tab mounts the first time it's opened; Smart Coach starts that session on its own, once per launch.
+  useEffect(() => {
+    if (autoSessionStarted) return;
+    autoSessionStarted = true;
+    void startSession();
+  }, [startSession]);
+
+  const visibleMessages = useMemo(() => messages.filter((message) => !message.hidden), [messages]);
+  const isEmpty = visibleMessages.length === 0;
+  const newestFirst = useMemo(() => [...visibleMessages].reverse(), [visibleMessages]);
+  const status = isResponding
+    ? 'typing…'
+    : isPreparingQuiz
+      ? 'preparing your quiz…'
+      : quizProgress
+        ? `Quiz · question ${quizProgress.current} of ${quizProgress.total}`
+        : 'Money coach';
   const contentBottomInset = composerHeight + spacing.md;
 
   const sendDraft = () => {
@@ -64,7 +96,7 @@ export function AIScreen() {
                 fontFamily: typography.fontFamily.regular,
                 fontSize: typography.fontSize.xs,
               }}>
-              {isResponding ? 'typing…' : 'Money coach'}
+              {status}
             </Text>
           </View>
 
@@ -97,9 +129,13 @@ export function AIScreen() {
               data={newestFirst}
               inverted
               keyExtractor={(message) => message.id}
-              renderItem={({ item }) => (
-                <MessageBubble message={item} />
-              )}
+              renderItem={({ item }) =>
+                item.quiz ? (
+                  <QuizCard quiz={item.quiz} onAnswer={(option) => answerQuiz(item.id, option)} onEnd={endQuiz} />
+                ) : (
+                  <MessageBubble message={item} />
+                )
+              }
               ListHeaderComponent={<View style={{ height: contentBottomInset }} />}
               ItemSeparatorComponent={() => <View style={{ height: spacing.sm + 2 }} />}
               contentContainerStyle={{ paddingHorizontal: spacing.md, paddingBottom: spacing.md }}
@@ -119,7 +155,15 @@ export function AIScreen() {
               paddingHorizontal: spacing.md,
               paddingBottom: keyboardVisible ? spacing.sm : bottomNavInset,
             }}>
-            {isEmpty ? <QuickReplies onSelect={(text) => void send(text)} /> : null}
+            {isEmpty ? (
+              <QuickReplies
+                actions={[
+                  { label: "Today's lesson", onPress: () => void startSession() },
+                  { label: 'Quiz me', onPress: () => void startQuiz() },
+                ]}
+                onSelect={(text) => void send(text)}
+              />
+            ) : null}
             <Composer
               value={draft}
               onChangeText={setDraft}

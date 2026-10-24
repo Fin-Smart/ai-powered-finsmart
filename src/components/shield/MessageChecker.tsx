@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Keyboard, Pressable, Text, TextInput, View } from 'react-native';
 
+import { recordHabit } from '../../coach/habits';
 import { assessMessage, type MessageInput, type ScamAssessment } from '../../shield/scamDetector';
 import { useTheme } from '../../theme/ThemeProvider';
 import { ScamVerdict } from './ScamVerdict';
@@ -42,7 +43,10 @@ export function MessageChecker({ channel }: { channel: Channel }) {
       subject: channel === 'email' ? subject.trim() || undefined : undefined,
     };
     Keyboard.dismiss();
-    setChecked({ id: Date.now(), input, assessment: assessMessage(input) });
+    const assessment = assessMessage(input);
+    recordHabit('scam_check', channel);
+    if (assessment.level !== 'safe') recordHabit('scam_flagged', channel);
+    setChecked({ id: Date.now(), input, assessment });
   };
 
   const inputStyle = {

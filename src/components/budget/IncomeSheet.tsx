@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { budgetErrorMessage, saveIncome } from '../../budget/budgetRepo';
 import { useBudgets } from '../../budget/BudgetsProvider';
+import { recordHabit } from '../../coach/habits';
 import { centsToInput, defaultCurrency, parseMoney } from '../../budget/money';
 import type { IncomeKind } from '../../budget/types';
 import { useTheme } from '../../theme/ThemeProvider';
@@ -37,6 +38,7 @@ export function IncomeSheet({ visible, onClose }: { visible: boolean; onClose: (
     if (!uid) return;
     Keyboard.dismiss();
     onClose();
+    recordHabit('income_set', kind);
     saveIncome(uid, { kind, amountCents, currency }).then(
       () => toast.success(income ? 'Income updated' : 'Income saved'),
       (error) => toast.error(budgetErrorMessage(error, "Couldn't save your income. Please try again.")),

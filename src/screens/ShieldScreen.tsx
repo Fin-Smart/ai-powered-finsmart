@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, Text, View } from 'react-native';
 
+import { setShieldSnapshot } from '../coach/habits';
 import { ComposeIcon, MailIcon, MessageIcon } from '../components/icons';
 import { Screen } from '../components/Screen';
 import { ComposeSheet } from '../components/shield/ComposeSheet';
@@ -73,6 +74,10 @@ export function ShieldScreen() {
 
   const flaggedTexts = assessedTexts.filter((item) => isFlagged(item.assessment)).length;
   const flaggedEmails = assessedEmails.filter((item) => isFlagged(item.assessment)).length;
+
+  useEffect(() => {
+    setShieldSnapshot({ flaggedEmails, flaggedTexts });
+  }, [flaggedEmails, flaggedTexts]);
   const visibleTexts = smsFilter === 'all' ? assessedTexts : assessedTexts.filter((item) => isFlagged(item.assessment));
   const visibleEmails =
     emailFilter === 'all' ? assessedEmails : assessedEmails.filter((item) => isFlagged(item.assessment));

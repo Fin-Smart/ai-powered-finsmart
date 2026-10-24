@@ -3,8 +3,15 @@ import { Pressable, ScrollView, Text } from 'react-native';
 import { COACH_SUGGESTIONS } from '../../coach/smartCoach';
 import { useTheme } from '../../theme/ThemeProvider';
 
-export function QuickReplies({ onSelect }: { onSelect: (text: string) => void }) {
+type QuickAction = { label: string; onPress: () => void };
+
+/** Featured actions (filled) followed by suggested questions (outlined). */
+export function QuickReplies({ actions = [], onSelect }: { actions?: QuickAction[]; onSelect: (text: string) => void }) {
   const { colors, spacing, typography } = useTheme().theme;
+  const chips = [
+    ...actions.map((action) => ({ ...action, featured: true })),
+    ...COACH_SUGGESTIONS.map((suggestion) => ({ label: suggestion, onPress: () => onSelect(suggestion), featured: false })),
+  ];
 
   return (
     <ScrollView
@@ -13,14 +20,14 @@ export function QuickReplies({ onSelect }: { onSelect: (text: string) => void })
       keyboardShouldPersistTaps="handled"
       style={{ marginHorizontal: -spacing.md, marginBottom: spacing.sm + 2 }}
       contentContainerStyle={{ paddingHorizontal: spacing.md, gap: spacing.sm }}>
-      {COACH_SUGGESTIONS.map((suggestion) => (
+      {chips.map((chip) => (
         <Pressable
-          key={suggestion}
+          key={chip.label}
           accessibilityRole="button"
-          onPress={() => onSelect(suggestion)}
+          onPress={chip.onPress}
           style={({ pressed }) => ({
-            backgroundColor: colors.background,
-            borderColor: colors.border,
+            backgroundColor: chip.featured ? colors.text : colors.background,
+            borderColor: chip.featured ? colors.text : colors.border,
             borderWidth: 1,
             borderRadius: 999,
             paddingVertical: spacing.sm,
@@ -29,11 +36,11 @@ export function QuickReplies({ onSelect }: { onSelect: (text: string) => void })
           })}>
           <Text
             style={{
-              color: colors.text,
-              fontFamily: typography.fontFamily.medium,
+              color: chip.featured ? colors.background : colors.text,
+              fontFamily: chip.featured ? typography.fontFamily.semiBold : typography.fontFamily.medium,
               fontSize: typography.fontSize.sm,
             }}>
-            {suggestion}
+            {chip.label}
           </Text>
         </Pressable>
       ))}

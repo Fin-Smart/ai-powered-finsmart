@@ -14,6 +14,7 @@ import {
   updateTransaction,
 } from '../../budget/budgetRepo';
 import { useBudgets } from '../../budget/BudgetsProvider';
+import { recordHabit } from '../../coach/habits';
 import { formatMoney } from '../../budget/money';
 import { formatDay } from '../../budget/period';
 import type { BudgetCategory, BudgetDraft, BudgetSummary, BudgetTransaction, TransactionDraft } from '../../budget/types';
@@ -77,6 +78,7 @@ export function BudgetSheet({ target, onClose }: { target: BudgetSheetTarget | n
     const id = newBudgetId(uid);
     setCreatedId(id);
     setScreen({ name: 'view' });
+    recordHabit('budget_created', draft.label);
     sync(createBudget(uid, id, draft), 'Budget created', "Couldn't create the budget. Please try again.", () =>
       setCreatedId((current) => (current === id ? null : current)),
     );
@@ -104,6 +106,10 @@ export function BudgetSheet({ target, onClose }: { target: BudgetSheetTarget | n
   const saveTransaction = async (draft: TransactionDraft, existing?: BudgetTransaction) => {
     if (!uid || !summary) return;
     setScreen({ name: 'view' });
+    if (!existing) {
+      const categoryName = summary.budget.categories.find((category) => category.id === draft.categoryId)?.name;
+      recordHabit(draft.direction === 'out' ? 'expense_added' : 'money_in_added', categoryName ?? draft.note);
+    }
     sync(
       existing
         ? updateTransaction(uid, summary.budget.id, existing.id, draft)
@@ -138,6 +144,7 @@ export function BudgetSheet({ target, onClose }: { target: BudgetSheetTarget | n
     }
 
     const spent = summary.spentByCategory[category.id] ?? 0;
+    recordHabit('bill_paid', category.name);
     sync(
       addTransaction(uid, budgetId, {
         amountCents: Math.max(category.limitCents - spent, 0),

@@ -8,6 +8,8 @@ export type StoredMessage = {
   id: string;
   role: 'user' | 'coach';
   text: string;
+  /** Sent by Smart Coach on the user's behalf, e.g. to start a lesson; kept for context, never shown. */
+  hidden?: boolean;
 };
 
 export type Conversation = {

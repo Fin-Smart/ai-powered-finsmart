@@ -2,6 +2,7 @@ import { AIError, getGenerativeModel, ThinkingLevel, type Content } from '@react
 
 import { budgetContextForCoach } from '../budget/coachContext';
 import { ai } from '../lib/ai';
+import { habitsForCoach } from './habits';
 
 export const COACH_MODEL = 'gemini-3.8-flash';
 /** For structured one-shot tasks (scam reviews, budget plans) where speed matters more than depth. */
@@ -34,13 +35,35 @@ const coachModel = getGenerativeModel(ai, {
   generationConfig: { thinkingConfig: { thinkingLevel: ThinkingLevel.LOW } },
 });
 
-/** Each chat starts with the user's latest budgets so advice can use their real numbers. */
+/** Each chat starts with the user's latest budgets and habits so advice can use their real situation. */
 export function startCoachChat(history: Content[] = []) {
-  const budgets = budgetContextForCoach();
   return coachModel.startChat({
     history,
-    systemInstruction: budgets ? `${SYSTEM_INSTRUCTION}\n\n${budgets}` : SYSTEM_INSTRUCTION,
+    systemInstruction: [SYSTEM_INSTRUCTION, budgetContextForCoach(), habitsForCoach()].filter(Boolean).join('\n\n'),
   });
+}
+
+/**
+ * Sent on the user's behalf (and hidden from the chat) to open a session. The reply's first line
+ * names the topic so it can be logged and handed to the quiz.
+ */
+export const LESSON_PROMPT = `Start today's session with a short lesson for me.
+Pick ONE topic that fits my recent FinSmart activity and budgets from your instructions. If there's little activity, pick a beginner essential I haven't covered recently.
+Format: first line is only "Topic: <two to four words>". Then greet me in one short sentence and teach the topic in under 120 words, with one example that uses my own numbers when you have them.
+Finish by saying a 10-question quiz on it is next.`;
+
+const TOPIC_LINE = /^\s*\**topic:?\**\s*(.+)\n+/i;
+
+/**
+ * Splits the "Topic: …" line off a lesson reply. While the reply is still streaming and the line
+ * isn't complete yet, `text` is empty so the label never flashes on screen.
+ */
+export function parseLesson(reply: string) {
+  const match = reply.match(TOPIC_LINE);
+  if (match) return { topic: match[1].replace(/\*+/g, '').trim(), text: reply.slice(match[0].length).trim() };
+  const head = reply.trimStart().replace(/^\*+/, '').toLowerCase();
+  if (!reply.includes('\n') && (head.startsWith('topic') || 'topic'.startsWith(head))) return { topic: null, text: '' };
+  return { topic: null, text: reply };
 }
 
 export const COACH_SUGGESTIONS = [
