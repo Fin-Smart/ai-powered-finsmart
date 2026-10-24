@@ -1,3 +1,4 @@
+import * as AppleAuthentication from 'expo-apple-authentication';
 import type { ComponentType } from 'react';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 
@@ -5,7 +6,7 @@ import { isAppleSignInAvailable } from '../../lib/appleAuth';
 import { isGoogleSignInAvailable } from '../../lib/googleAuth';
 import { useTheme } from '../../theme/ThemeProvider';
 import { GlassSurface, isLiquidGlassEnabled } from '../GlassSurface';
-import { AppleLogoIcon, GoogleLogoIcon, type IconProps } from '../icons';
+import { GoogleLogoIcon, type IconProps } from '../icons';
 
 const HEIGHT = 54;
 
@@ -46,9 +47,10 @@ type SocialButtonsProps = {
   busy?: SocialProvider | null;
 };
 
-/** Google and Apple as floating glass pills on one row; each is hidden where it isn't available. */
+/** Google's glass pill and Apple's system button on one row; each is hidden where it isn't available. */
 export function SocialButtons({ onGoogle, onApple, busy }: SocialButtonsProps) {
-  const { colors, spacing, typography } = useTheme().theme;
+  const { theme, isDark } = useTheme();
+  const { colors, spacing, typography } = theme;
   if (!isGoogleSignInAvailable && !isAppleSignInAvailable) return null;
   const both = isGoogleSignInAvailable && isAppleSignInAvailable;
 
@@ -74,14 +76,19 @@ export function SocialButtons({ onGoogle, onApple, busy }: SocialButtonsProps) {
           />
         ) : null}
         {isAppleSignInAvailable ? (
-          <SocialButton
-            label={both ? 'Apple' : 'Continue with Apple'}
-            accessibilityLabel="Continue with Apple"
-            Icon={AppleLogoIcon}
-            onPress={onApple}
-            busy={busy === 'apple'}
-            disabled={busy != null}
-          />
+          <View style={{ flex: 1, opacity: busy === 'apple' ? 0.7 : 1, pointerEvents: busy != null ? 'none' : 'auto' }}>
+            <AppleAuthentication.AppleAuthenticationButton
+              buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
+              buttonStyle={
+                isDark
+                  ? AppleAuthentication.AppleAuthenticationButtonStyle.WHITE
+                  : AppleAuthentication.AppleAuthenticationButtonStyle.BLACK
+              }
+              cornerRadius={HEIGHT / 2}
+              onPress={onApple}
+              style={{ height: HEIGHT, width: '100%' }}
+            />
+          </View>
         ) : null}
       </View>
     </View>
