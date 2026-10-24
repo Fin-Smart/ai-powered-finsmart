@@ -32,8 +32,8 @@ Formatting:
 const coachModel = getGenerativeModel(ai, {
   model: COACH_MODEL,
   systemInstruction: SYSTEM_INSTRUCTION,
-  // Beginner money questions don't need deep reasoning; minimal thinking starts the reply sooner.
-  generationConfig: { thinkingConfig: { thinkingLevel: ThinkingLevel.MINIMAL } },
+  // Beginner money questions don't need deep reasoning; low is the lightest level 3.8 Flash accepts.
+  generationConfig: { thinkingConfig: { thinkingLevel: ThinkingLevel.LOW } },
 });
 
 /** Each chat starts with the user's latest budgets and habits so advice can use their real situation. */

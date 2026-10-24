@@ -86,6 +86,12 @@
         "projectId": "e08e5099-b5cb-4795-acf4-d968d0bb7058"
       }
     },
-    "owner": "oscarpoco"
+    "owner": "oscarpoco",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/e08e5099-b5cb-4795-acf4-d968d0bb7058"
+    }
   }
 }
