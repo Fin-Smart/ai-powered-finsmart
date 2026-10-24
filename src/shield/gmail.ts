@@ -28,17 +28,44 @@ type GmailApiMessage = {
   payload?: GmailPart;
 };
 
+/** The token is expired, revoked, or was issued before Gmail access was granted. */
 export class GmailAuthError extends Error {}
+
+/** The Gmail API is turned off in the Google Cloud project that owns the OAuth client. */
+export class GmailApiDisabledError extends Error {}
+
+type GoogleApiErrorBody = {
+  error?: {
+    message?: string;
+    status?: string;
+    errors?: { reason?: string }[];
+    details?: { reason?: string }[];
+  };
+};
+
+const SCOPE_REASONS = new Set(['ACCESS_TOKEN_SCOPE_INSUFFICIENT', 'insufficientPermissions', 'authError']);
+const DISABLED_REASONS = new Set(['SERVICE_DISABLED', 'accessNotConfigured']);
 
 async function gmailFetch<T>(accessToken: string, path: string): Promise<T> {
   const response = await fetch(`${API}${path}`, { headers: { Authorization: `Bearer ${accessToken}` } });
-  if (response.status === 401 || response.status === 403) {
-    throw new GmailAuthError('Gmail access has expired or was revoked.');
+  if (response.ok) {
+    return (await response.json()) as T;
   }
-  if (!response.ok) {
-    throw new Error(`Gmail request failed (${response.status}).`);
+
+  const body = (await response.json().catch(() => ({}))) as GoogleApiErrorBody;
+  const reasons = [...(body.error?.errors ?? []), ...(body.error?.details ?? [])]
+    .map((item) => item.reason)
+    .filter((reason): reason is string => Boolean(reason));
+
+  if (reasons.some((reason) => DISABLED_REASONS.has(reason))) {
+    throw new GmailApiDisabledError(
+      "The Gmail API is turned off for FinSmart's Google Cloud project. Turn it on in Google Cloud console.",
+    );
   }
-  return (await response.json()) as T;
+  if (response.status === 401 || reasons.some((reason) => SCOPE_REASONS.has(reason))) {
+    throw new GmailAuthError('Gmail access has expired or was not granted.');
+  }
+  throw new Error(body.error?.message ? `Gmail: ${body.error.message}` : `Gmail request failed (${response.status}).`);
 }
 
 function decodeBase64Url(data: string) {

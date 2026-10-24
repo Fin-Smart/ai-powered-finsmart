@@ -77,11 +77,25 @@ export function hasGmailAccess() {
 /** Asks for read-only Gmail access on top of the existing sign-in. Returns false if declined. */
 export async function requestGmailAccess(): Promise<boolean> {
   const { GoogleSignin } = requireGoogle();
-  const response = await GoogleSignin.addScopes({ scopes: [GMAIL_READONLY_SCOPE] });
-  return response?.type === 'success' && response.data.scopes.includes(GMAIL_READONLY_SCOPE);
+  try {
+    const response = await GoogleSignin.addScopes({ scopes: [GMAIL_READONLY_SCOPE] });
+    return response?.type === 'success' && response.data.scopes.includes(GMAIL_READONLY_SCOPE);
+  } catch (error) {
+    // iOS rejects when the scope is already granted; that still means access is available.
+    if (hasGmailAccess()) return true;
+    throw error;
+  }
 }
 
-export async function getGoogleAccessToken() {
+/**
+ * `forceRefresh` drops the cached token first. Android keeps returning a token minted before a scope
+ * was added, so a fresh one is needed after `requestGmailAccess` or when Gmail rejects the old one.
+ */
+export async function getGoogleAccessToken(forceRefresh = false) {
   const { GoogleSignin } = requireGoogle();
+  const { accessToken } = await GoogleSignin.getTokens();
+  if (!forceRefresh) return accessToken;
+
+  await GoogleSignin.clearCachedAccessToken(accessToken).catch(() => undefined);
   return (await GoogleSignin.getTokens()).accessToken;
 }

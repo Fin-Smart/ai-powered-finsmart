@@ -12,7 +12,7 @@ import {
   restoreGoogleSession,
   signInWithGoogle,
 } from '../lib/googleAuth';
-import { fetchRecentEmails, GmailAuthError, type GmailMessage } from './gmail';
+import { fetchRecentEmails, GmailApiDisabledError, GmailAuthError, type GmailMessage } from './gmail';
 
 export type GmailStatus = 'unavailable' | 'signedOut' | 'needsAccess' | 'loading' | 'ready' | 'error';
 
@@ -22,8 +22,8 @@ export function useGmailScan() {
   const [emails, setEmails] = useState<GmailMessage[]>([]);
   const [isConnecting, setIsConnecting] = useState(false);
 
-  /** Resolves true when the inbox loaded. */
-  const refresh = useCallback(async () => {
+  /** Resolves true when the inbox loaded. `freshToken` skips the cached Google access token. */
+  const refresh = useCallback(async (freshToken = false) => {
     if (!isGoogleSignInAvailable) return false;
     if (!auth.currentUser) {
       setStatus('signedOut');
@@ -39,13 +39,22 @@ export function useGmailScan() {
 
     setStatus('loading');
     try {
-      setEmails(await fetchRecentEmails(await getGoogleAccessToken()));
+      try {
+        setEmails(await fetchRecentEmails(await getGoogleAccessToken(freshToken)));
+      } catch (error) {
+        // A cached token can predate the Gmail grant; retry once with a newly minted one.
+        if (!(error instanceof GmailAuthError) || freshToken) throw error;
+        setEmails(await fetchRecentEmails(await getGoogleAccessToken(true)));
+      }
       setStatus('ready');
       return true;
     } catch (error) {
       if (error instanceof GmailAuthError) {
         setStatus('needsAccess');
-        toast.error('Gmail access expired. Tap Connect Gmail to reconnect.');
+        toast.error("Gmail didn't give FinSmart access. Tap Connect Gmail and allow reading your email.");
+      } else if (error instanceof GmailApiDisabledError) {
+        setStatus('error');
+        toast.error(error.message);
       } else {
         setStatus('error');
         toast.error(errorMessage(error, "Couldn't load your Gmail. Please try again."));
@@ -67,7 +76,7 @@ export function useGmailScan() {
         toast.info('Gmail access is needed for Shield to check your emails.');
         return;
       }
-      if (await refresh()) toast.success('Gmail connected');
+      if (await refresh(true)) toast.success('Gmail connected');
     } catch (error) {
       toast.error(errorMessage(error, "Couldn't connect Gmail. Please try again."));
     } finally {
