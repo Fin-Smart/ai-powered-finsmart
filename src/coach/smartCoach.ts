@@ -5,12 +5,8 @@ import { ai } from '../lib/ai';
 import { OutOfTokensError } from '../lib/aiUsage';
 import { habitsForCoach } from './habits';
 
-export const COACH_MODEL = 'gemini-3.8-flash';
-/**
- * For structured one-shot tasks (quizzes, budget plans, scam reviews). Free-tier rate limits are per
- * model, so these also keep the chat's 3.8 Flash allowance free for chat.
- */
-export const FAST_MODEL = 'gemini-3.5-flash-lite';
+/** Every AI feature (chat, quizzes, budget plans, scam reviews) uses this model. */
+export const COACH_MODEL = 'gemini-3.5-flash-lite';
 
 const SYSTEM_INSTRUCTION = `You are Smart Coach, the friendly personal finance teacher inside the FinSmart app.
 
@@ -35,8 +31,8 @@ Formatting:
 const coachModel = getGenerativeModel(ai, {
   model: COACH_MODEL,
   systemInstruction: SYSTEM_INSTRUCTION,
-  // Beginner money questions don't need deep reasoning; low is the lightest level 3.8 Flash accepts.
-  generationConfig: { thinkingConfig: { thinkingLevel: ThinkingLevel.LOW } },
+  // Beginner money questions don't need deep reasoning; minimal thinking starts the reply sooner.
+  generationConfig: { thinkingConfig: { thinkingLevel: ThinkingLevel.MINIMAL } },
 });
 
 /** Each chat starts with the user's latest budgets and habits so advice can use their real situation. */

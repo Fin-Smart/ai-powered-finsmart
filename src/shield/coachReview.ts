@@ -1,6 +1,6 @@
 import { getGenerativeModel, Schema, ThinkingLevel } from '@react-native-firebase/ai';
 
-import { FAST_MODEL, getCoachErrorMessage, isTimeout } from '../coach/smartCoach';
+import { COACH_MODEL, getCoachErrorMessage, isTimeout } from '../coach/smartCoach';
 import { ai } from '../lib/ai';
 import { assertTokensAvailable, recordAiUsage } from '../lib/aiUsage';
 import { onSignOut } from '../lib/session';
@@ -18,7 +18,7 @@ const REVIEW_TIMEOUT_MS = 20_000;
 
 /** Flash-Lite with low thinking: a scam verdict is a quick classification, not a long answer. */
 const reviewModel = getGenerativeModel(ai, {
-  model: FAST_MODEL,
+  model: COACH_MODEL,
   systemInstruction: `You are Smart Coach, the scam-awareness coach in the FinSmart app.
 You review one SMS or email that a user is unsure about and decide whether it is a financial scam.
 Judge only from the message content, sender and links. Common scams: advance-fee ("you won R1000, pay R200 to claim"), fake bank/SARS/SASSA/courier messages, requests for OTPs/PINs/passwords/card details, fake investments, and payment by gift card, airtime or crypto.

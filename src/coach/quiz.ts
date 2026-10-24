@@ -4,7 +4,7 @@ import { budgetContextForCoach } from '../budget/coachContext';
 import { ai } from '../lib/ai';
 import { assertTokensAvailable, OutOfTokensError, recordAiUsage } from '../lib/aiUsage';
 import { habitsForCoach, recentQuizQuestions } from './habits';
-import { FAST_MODEL, getCoachErrorMessage, isTimeout } from './smartCoach';
+import { COACH_MODEL, getCoachErrorMessage, isTimeout } from './smartCoach';
 
 export const QUIZ_LENGTH = 10;
 /** The quiz is written as two parallel halves, so the first question is ready in about half the time. */
@@ -20,7 +20,7 @@ export type QuizQuestion = {
 };
 
 const quizModel = getGenerativeModel(ai, {
-  model: FAST_MODEL,
+  model: COACH_MODEL,
   systemInstruction: `You write short multiple-choice quizzes for Smart Coach, the personal finance teacher in the FinSmart app.
 Write exactly the number of beginner questions requested, on the focus requested. Each has 4 short options with exactly one correct answer.
 Where it fits, base questions on the user's own budgets and activity, using their real numbers and currency.

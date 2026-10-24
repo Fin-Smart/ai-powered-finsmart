@@ -1,6 +1,6 @@
 import { AIError, getGenerativeModel, Schema, ThinkingLevel } from '@react-native-firebase/ai';
 
-import { FAST_MODEL, getCoachErrorMessage, isTimeout } from '../coach/smartCoach';
+import { COACH_MODEL, getCoachErrorMessage, isTimeout } from '../coach/smartCoach';
 import { ai } from '../lib/ai';
 import { assertTokensAvailable, recordAiUsage } from '../lib/aiUsage';
 import { formatMoney } from './money';
@@ -33,7 +33,7 @@ const PLAN_TIMEOUT_MS = 45_000;
 const RULES = 'Never recommend specific financial products, stocks or crypto.';
 
 const plannerModel = getGenerativeModel(ai, {
-  model: FAST_MODEL,
+  model: COACH_MODEL,
   systemInstruction: `You are Smart Coach in the FinSmart app, helping a beginner plan a budget.
 Split the money available into 4-9 practical categories with whole-number amounts in the user's currency.
 The amounts must add up to no more than the money available. For monthly budgets include an emergency fund or savings category unless money is very tight.
@@ -60,7 +60,7 @@ ${RULES}`,
 });
 
 const adjusterModel = getGenerativeModel(ai, {
-  model: FAST_MODEL,
+  model: COACH_MODEL,
   systemInstruction: `You are Smart Coach in the FinSmart app, editing a beginner's draft budget plan.
 You get the current plan and a change the user asked for. Return the complete updated plan.
 - "included" true means the category is ticked and will be used; false means it is unticked: kept in the list but not used.
