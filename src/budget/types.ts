@@ -39,6 +39,8 @@ export type BudgetTransaction = {
   /** SMS/email id the transaction was detected from, used to avoid duplicates. */
   sourceId: string | null;
   detected: boolean;
+  /** Created by ticking a category as paid; removing it unticks the category. */
+  marksPaid?: boolean;
   createdAt: number;
 };
 
@@ -55,4 +57,6 @@ export type BudgetSummary = {
   receivedCents: number;
   remainingCents: number;
   spentByCategory: Record<string, number>;
+  /** Categories ticked as paid in the active period. */
+  paidCategoryIds: string[];
 };

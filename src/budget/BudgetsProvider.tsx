@@ -20,10 +20,12 @@ const RETRY_DELAYS_MS = [2_000, 5_000, 15_000, 30_000];
 
 function summarize(budget: Budget, transactions: BudgetTransaction[]): BudgetSummary {
   const spentByCategory: Record<string, number> = {};
+  const paid = new Set<string>();
   let spentCents = 0;
   let receivedCents = 0;
 
   for (const transaction of transactions) {
+    if (transaction.marksPaid && transaction.categoryId) paid.add(transaction.categoryId);
     if (transaction.direction === 'in') {
       receivedCents += transaction.amountCents;
       continue;
@@ -41,6 +43,7 @@ function summarize(budget: Budget, transactions: BudgetTransaction[]): BudgetSum
     receivedCents,
     remainingCents: budget.availableCents + receivedCents - spentCents,
     spentByCategory,
+    paidCategoryIds: budget.categories.filter((category) => paid.has(category.id)).map((category) => category.id),
   };
 }
 

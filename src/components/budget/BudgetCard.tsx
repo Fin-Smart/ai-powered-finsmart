@@ -52,7 +52,13 @@ export function BudgetCard({ summary, onPress }: { summary: BudgetSummary; onPre
         </View>
         <ProgressBar used={spentCents} total={total} height={4} />
         <Text numberOfLines={1} style={{ color: colors.textMuted, fontFamily: typography.fontFamily.regular, fontSize: typography.fontSize.xs }}>
-          {budget.label} · {period.label}
+          {[
+            budget.label,
+            period.label,
+            budget.categories.length > 0 ? `${summary.paidCategoryIds.length}/${budget.categories.length} paid` : null,
+          ]
+            .filter(Boolean)
+            .join(' · ')}
         </Text>
       </View>
 

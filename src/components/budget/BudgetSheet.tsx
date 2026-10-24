@@ -16,9 +16,10 @@ import {
 import { useBudgets } from '../../budget/BudgetsProvider';
 import { formatMoney } from '../../budget/money';
 import { formatDay } from '../../budget/period';
-import type { BudgetDraft, BudgetSummary, BudgetTransaction, TransactionDraft } from '../../budget/types';
+import type { BudgetCategory, BudgetDraft, BudgetSummary, BudgetTransaction, TransactionDraft } from '../../budget/types';
 import { useTheme } from '../../theme/ThemeProvider';
 import { dialog } from '../dialog/dialogStore';
+import { TickIcon } from '../icons';
 import { Sheet } from '../Sheet';
 import { toast } from '../toast/toastStore';
 import { BudgetForm, newCategoryId } from './BudgetForm';
@@ -120,6 +121,41 @@ export function BudgetSheet({ target, onClose }: { target: BudgetSheetTarget | n
     sync(deleteTransaction(uid, summary.budget.id, transaction.id), 'Entry deleted', "Couldn't delete this entry. Please try again.");
   };
 
+  /** Ticking records whatever is left of the category as paid; unticking removes that payment. */
+  const togglePaid = (category: BudgetCategory) => {
+    if (!uid || !summary) return;
+    const budgetId = summary.budget.id;
+    const markers = summary.transactions.filter((item) => item.marksPaid && item.categoryId === category.id);
+    const failure = `Couldn't update ${category.name}. Please try again.`;
+
+    if (markers.length > 0) {
+      sync(
+        Promise.all(markers.map((item) => deleteTransaction(uid, budgetId, item.id))),
+        `${category.name} marked as not paid`,
+        failure,
+      );
+      return;
+    }
+
+    const spent = summary.spentByCategory[category.id] ?? 0;
+    sync(
+      addTransaction(uid, budgetId, {
+        amountCents: Math.max(category.limitCents - spent, 0),
+        direction: 'out',
+        categoryId: category.id,
+        note: `${category.name} paid`,
+        // Keeps the payment inside the period, e.g. for a one-off budget that starts later.
+        date: Math.min(Math.max(Date.now(), summary.period.start), summary.period.end - 1),
+        source: 'manual',
+        sourceId: null,
+        detected: false,
+        marksPaid: true,
+      }),
+      `${category.name} marked as paid`,
+      failure,
+    );
+  };
+
   const applyPlan = (plan: BudgetPlan) => {
     if (!uid || !summary) return;
     const categories = plan.categories.map((item) => ({
@@ -182,6 +218,7 @@ export function BudgetSheet({ target, onClose }: { target: BudgetSheetTarget | n
               onEdit={() => setScreen({ name: 'edit' })}
               onEditTransaction={(transaction) => setScreen({ name: 'expense', transaction })}
               onDeleteTransaction={(transaction) => void removeTransaction(transaction)}
+              onTogglePaid={togglePaid}
             />
           )}
         </SheetBody>
@@ -223,11 +260,22 @@ type BudgetOverviewProps = {
   onEdit: () => void;
   onEditTransaction: (transaction: BudgetTransaction) => void;
   onDeleteTransaction: (transaction: BudgetTransaction) => void;
+  onTogglePaid: (category: BudgetCategory) => void;
 };
 
-function BudgetOverview({ summary, onAddExpense, onPlan, onEdit, onEditTransaction, onDeleteTransaction }: BudgetOverviewProps) {
+function BudgetOverview({
+  summary,
+  onAddExpense,
+  onPlan,
+  onEdit,
+  onEditTransaction,
+  onDeleteTransaction,
+  onTogglePaid,
+}: BudgetOverviewProps) {
   const { colors, spacing, typography, radius } = useTheme().theme;
-  const { budget, spentCents, receivedCents, remainingCents, spentByCategory, transactions } = summary;
+  const { budget, spentCents, receivedCents, remainingCents, spentByCategory, paidCategoryIds } = summary;
+  // A tick on an already fully spent category records nothing worth listing.
+  const transactions = summary.transactions.filter((item) => !(item.marksPaid && item.amountCents === 0));
   const money = (cents: number) => formatMoney(cents, budget.currency);
   const total = budget.availableCents + receivedCents;
   const over = remainingCents < 0;
@@ -281,17 +329,27 @@ function BudgetOverview({ summary, onAddExpense, onPlan, onEdit, onEditTransacti
         budget.categories.map((category) => {
           const spent = spentByCategory[category.id] ?? 0;
           const categoryOver = spent > category.limitCents;
+          const paid = paidCategoryIds.includes(category.id);
           return (
-            <View key={category.id} style={{ gap: spacing.xs + 2 }}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: spacing.sm }}>
-                <Text style={{ flexShrink: 1, color: colors.text, fontFamily: typography.fontFamily.medium, fontSize: typography.fontSize.sm }}>
-                  {category.name}
-                </Text>
-                <Text style={{ color: categoryOver ? colors.secondary : colors.textSecondary, fontFamily: typography.fontFamily.regular, fontSize: typography.fontSize.sm }}>
-                  {money(spent)} / {money(category.limitCents)}
-                </Text>
+            <View key={category.id} style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+              <View style={{ flex: 1, gap: spacing.xs + 2 }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: spacing.sm }}>
+                  <Text
+                    style={{
+                      flexShrink: 1,
+                      color: paid ? colors.textSecondary : colors.text,
+                      fontFamily: typography.fontFamily.medium,
+                      fontSize: typography.fontSize.sm,
+                    }}>
+                    {category.name}
+                  </Text>
+                  <Text style={{ color: categoryOver ? colors.secondary : colors.textSecondary, fontFamily: typography.fontFamily.regular, fontSize: typography.fontSize.sm }}>
+                    {money(spent)} / {money(category.limitCents)}
+                  </Text>
+                </View>
+                <ProgressBar used={spent} total={category.limitCents} height={6} />
               </View>
-              <ProgressBar used={spent} total={category.limitCents} height={6} />
+              <PaidCircle label={category.name} paid={paid} onPress={() => onTogglePaid(category)} />
             </View>
           );
         })
@@ -365,6 +423,33 @@ function BudgetOverview({ summary, onAddExpense, onPlan, onEdit, onEditTransacti
         </View>
       )}
     </>
+  );
+}
+
+const CIRCLE_SIZE = 26;
+
+function PaidCircle({ label, paid, onPress }: { label: string; paid: boolean; onPress: () => void }) {
+  const { colors } = useTheme().theme;
+  return (
+    <Pressable
+      accessibilityRole="checkbox"
+      accessibilityLabel={`${label} paid`}
+      accessibilityState={{ checked: paid }}
+      hitSlop={10}
+      onPress={onPress}
+      style={({ pressed }) => ({
+        width: CIRCLE_SIZE,
+        height: CIRCLE_SIZE,
+        borderRadius: CIRCLE_SIZE / 2,
+        borderWidth: paid ? 0 : 1.5,
+        borderColor: colors.textMuted,
+        backgroundColor: paid ? colors.primary : 'transparent',
+        alignItems: 'center',
+        justifyContent: 'center',
+        opacity: pressed ? 0.6 : 1,
+      })}>
+      {paid ? <TickIcon size={16} color={colors.onPrimary} strokeWidth={2.4} /> : null}
+    </Pressable>
   );
 }
 

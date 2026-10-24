@@ -8,10 +8,15 @@ export function setCoachBudgets(summaries: BudgetSummary[]) {
   latest = summaries;
 }
 
-function describe({ budget, period, spentCents, receivedCents, remainingCents, spentByCategory }: BudgetSummary) {
+function describe({ budget, period, spentCents, receivedCents, remainingCents, spentByCategory, paidCategoryIds }: BudgetSummary) {
   const money = (cents: number) => formatMoney(cents, budget.currency);
   const categories = budget.categories
-    .map((category) => `${category.name} ${money(spentByCategory[category.id] ?? 0)} of ${money(category.limitCents)}`)
+    .map(
+      (category) =>
+        `${category.name} ${money(spentByCategory[category.id] ?? 0)} of ${money(category.limitCents)}${
+          paidCategoryIds.includes(category.id) ? ' (paid)' : ''
+        }`,
+    )
     .join('; ');
 
   return [
