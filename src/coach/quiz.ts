@@ -6,6 +6,8 @@ import { habitsForCoach, recentQuizQuestions } from './habits';
 import { FAST_MODEL, getCoachErrorMessage, isTimeout } from './smartCoach';
 
 export const QUIZ_LENGTH = 10;
+/** The quiz is written as two parallel halves, so the first question is ready in about half the time. */
+const HALF = QUIZ_LENGTH / 2;
 const QUIZ_TIMEOUT_MS = 45_000;
 
 export type QuizQuestion = {
@@ -19,13 +21,12 @@ export type QuizQuestion = {
 const quizModel = getGenerativeModel(ai, {
   model: FAST_MODEL,
   systemInstruction: `You write short multiple-choice quizzes for Smart Coach, the personal finance teacher in the FinSmart app.
-Write exactly ${QUIZ_LENGTH} questions for a beginner. Each has 4 short options with exactly one correct answer.
-Start with the lesson's topic, then mix in related essentials: budgeting, saving, debt and credit, interest, emergency funds, and spotting financial scams.
+Write exactly the number of beginner questions requested, on the focus requested. Each has 4 short options with exactly one correct answer.
 Where it fits, base questions on the user's own budgets and activity, using their real numbers and currency.
 Keep questions under 25 words and options under 12 words. Explanations are one or two short, encouraging sentences.
 Avoid trick questions, "all of the above", and recommending specific products, stocks or crypto.`,
   generationConfig: {
-    thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
+    thinkingConfig: { thinkingLevel: ThinkingLevel.MINIMAL },
     responseMimeType: 'application/json',
     responseSchema: Schema.object({
       properties: {
@@ -64,10 +65,17 @@ const isValid = (question: QuizQuestion) =>
   question.correctIndex < question.options.length;
 
 /** Ten questions built around the lesson that was just taught and the person's own habits. */
-export async function generateQuiz(lesson: string | null): Promise<QuizQuestion[]> {
+/** Only dropped connections and server hiccups are worth one immediate retry. */
+function isRetryable(error: unknown) {
+  if (!(error instanceof AIError) || isTimeout(error)) return false;
+  const status = error.customErrorData?.status;
+  return (error.code as string) === 'error' || (status !== undefined && status >= 500);
+}
+
+async function generateBatch(focus: string, count: number): Promise<QuizQuestion[]> {
   const avoid = recentQuizQuestions();
   const prompt = [
-    lesson ? `Lesson just taught:\n${lesson}` : 'There was no lesson; choose beginner essentials.',
+    `Write ${count} questions. Focus: ${focus}`,
     budgetContextForCoach(),
     habitsForCoach(),
     avoid.length ? `Don't repeat these recent questions:\n${avoid.map((question) => `- ${question}`).join('\n')}` : null,
@@ -82,13 +90,13 @@ export async function generateQuiz(lesson: string | null): Promise<QuizQuestion[
     try {
       result = await generate();
     } catch (error) {
-      if (!(error instanceof AIError) || (error.code as string) !== 'fetch-error' || isTimeout(error)) throw error;
+      if (!isRetryable(error)) throw error;
       result = await generate();
     }
     const { questions } = JSON.parse(result.response.text()) as { questions: QuizQuestion[] };
     const usable = questions
       .filter(isValid)
-      .slice(0, QUIZ_LENGTH)
+      .slice(0, count)
       .map((question) => shuffleOptions({ ...question, topic: question.topic?.trim() || 'Money basics' }));
     if (usable.length === 0) throw new Error('empty quiz');
     return usable;
@@ -99,4 +107,29 @@ export async function generateQuiz(lesson: string | null): Promise<QuizQuestion[
         : getCoachErrorMessage(error),
     );
   }
+}
+
+export type QuizRequest = {
+  /** Questions on the lesson's topic; the quiz can start as soon as these arrive. */
+  first: Promise<QuizQuestion[]>;
+  /** Related essentials and the person's own money, written at the same time. */
+  rest: Promise<QuizQuestion[]>;
+};
+
+/**
+ * Starts writing a ten-question quiz as two parallel halves. `topic` is the lesson topic, or null
+ * for a general quiz. Both promises are pre-handled so an abandoned quiz never reports an error.
+ */
+export function generateQuiz(topic: string | null): QuizRequest {
+  const first = generateBatch(
+    topic ? `the lesson topic "${topic}", beginner level` : 'budgeting and saving basics',
+    HALF,
+  );
+  const rest = generateBatch(
+    `related money essentials${topic ? ` other than "${topic}"` : ''}: debt and credit, interest, emergency funds, spotting financial scams, and the user's own budgets`,
+    QUIZ_LENGTH - HALF,
+  );
+  first.catch(() => undefined);
+  rest.catch(() => undefined);
+  return { first, rest };
 }

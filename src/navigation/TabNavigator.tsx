@@ -23,6 +23,8 @@ const SCREENS: Record<TabKey, ComponentType> = {
 };
 
 const TAB_ORDER: TabKey[] = ['home', 'shield', 'ai', 'profile'];
+/** Long enough for the first screen to finish loading before Smart Coach starts its work. */
+const AI_PRELOAD_DELAY_MS = 2500;
 
 export function TabNavigator() {
   const { colors } = useTheme().theme;
@@ -51,6 +53,15 @@ export function TabNavigator() {
   useEffect(() => {
     if (pendingSmsAction) selectTab('shield');
   }, [pendingSmsAction]);
+
+  // Mount Smart Coach in the background once the app has settled, so today's lesson and quiz
+  // are prepared before the tab is opened.
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setVisitedTabs((prev) => (prev.has('ai') ? prev : new Set(prev).add('ai')));
+    }, AI_PRELOAD_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     if (activeTab === 'home') {

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from '../components/toast/toastStore';
 import { createTitle, saveConversation, type Conversation, type StoredMessage } from './chatHistory';
 import { recordHabit, recordQuizAnswer } from './habits';
-import { generateQuiz, type QuizQuestion } from './quiz';
+import { generateQuiz, QUIZ_LENGTH, type QuizQuestion, type QuizRequest } from './quiz';
 import { getCoachErrorMessage, LESSON_PROMPT, parseLesson, startCoachChat } from './smartCoach';
 
 export type QuizCardState = {
@@ -27,12 +27,30 @@ export type CoachMessage = {
   quiz?: QuizCardState;
 };
 
-type SendOptions = { hidden?: boolean; lesson?: boolean };
+type SendOptions = {
+  hidden?: boolean;
+  lesson?: boolean;
+  /** Background sessions fail quietly; the person can start one again from the chat. */
+  silent?: boolean;
+  /** Called once, as soon as a lesson's topic line has streamed in. */
+  onTopic?: (topic: string) => void;
+};
 
-type QuizRun = { questions: QuizQuestion[]; index: number; correct: number; missedTopics: string[] };
+type QuizRun = {
+  questions: QuizQuestion[];
+  index: number;
+  correct: number;
+  missedTopics: string[];
+  /** Shown as "of N"; settles to the real count once the second half arrives or fails. */
+  total: number;
+  /** The second half of the questions while it's still being written. */
+  rest: Promise<void> | null;
+};
+
+type StartQuizOptions = { topic?: string | null; request?: QuizRequest; silent?: boolean };
 
 /** Pause after an answer so the explanation can be read before the next question appears. */
-const NEXT_QUESTION_DELAY_MS = 1400;
+const NEXT_QUESTION_DELAY_MS = 1000;
 
 let idCounter = 0;
 const createId = () => `${Date.now()}-${idCounter++}`;
@@ -70,7 +88,7 @@ const toChatHistory = (messages: StoredMessage[]): Content[] =>
   }));
 
 function quizSummary(run: QuizRun, answered: number) {
-  const total = run.questions.length;
+  const total = run.total;
   const score =
     answered === total ? `Quiz complete: ${run.correct} of ${total} correct.` : `Quiz ended: ${run.correct} of ${answered} answered correctly.`;
   const praise =
@@ -98,6 +116,7 @@ export function useSmartCoach() {
   const savedTurnCountRef = useRef(0);
   const lessonTopicRef = useRef<string | null>(null);
   const sendRef = useRef<(input: string, options?: SendOptions) => Promise<string | null>>(async () => null);
+  const startQuizRef = useRef<(options?: StartQuizOptions) => Promise<void>>(async () => undefined);
   /** Bumped by reset/openConversation so late quiz results from an old session are ignored. */
   const sessionRef = useRef(0);
   const quizRef = useRef<QuizRun | null>(null);
@@ -149,12 +168,20 @@ export function useSmartCoach() {
       ]);
 
       let reply = '';
+      let topicReported = false;
 
       try {
         const result = await chat.sendMessageStream(text, { signal: controller.signal });
 
         for await (const chunk of result.stream) {
           reply += chunk.text();
+          if (options.onTopic && !topicReported) {
+            const { topic } = parseLesson(reply);
+            if (topic) {
+              topicReported = true;
+              options.onTopic(topic);
+            }
+          }
           updateMessage(replyId, { text: display(reply) });
         }
 
@@ -170,6 +197,8 @@ export function useSmartCoach() {
               prev.filter((message) => message.id !== replyId && !(options.hidden && message.id === userMessageId)),
             );
           }
+        } else if (options.silent) {
+          setMessages((prev) => prev.filter((message) => message.id !== replyId && message.id !== userMessageId));
         } else {
           setMessages((prev) => prev.filter((message) => message.id !== replyId));
           toast.error(getCoachErrorMessage(error), {
@@ -201,11 +230,11 @@ export function useSmartCoach() {
   const showQuestion = useCallback((run: QuizRun) => {
     const card: QuizCardState = {
       index: run.index,
-      total: run.questions.length,
+      total: run.total,
       question: run.questions[run.index],
       answer: null,
     };
-    setQuizProgress({ current: run.index + 1, total: run.questions.length });
+    setQuizProgress({ current: run.index + 1, total: run.total });
     setMessages((prev) => [...prev, { id: createId(), role: 'coach', text: '', status: 'done', quiz: card }]);
   }, []);
 
@@ -218,32 +247,83 @@ export function useSmartCoach() {
     ]);
   }, []);
 
-  /** Generates ten questions, then shows them one at a time as each is answered. */
+  /** Shows the next question, waiting briefly (with typing dots) if the second half is still being written. */
+  const advance = useCallback(
+    async (run: QuizRun) => {
+      if (run.index < run.questions.length) {
+        showQuestion(run);
+        return;
+      }
+      if (run.rest) {
+        const placeholderId = createId();
+        setMessages((prev) => [...prev, { id: placeholderId, role: 'coach', text: '', status: 'streaming' }]);
+        await run.rest;
+        setMessages((prev) => prev.filter((message) => message.id !== placeholderId));
+        if (quizRef.current !== run) return;
+        if (run.index < run.questions.length) {
+          showQuestion(run);
+          return;
+        }
+      }
+      finishQuiz(run, run.index);
+    },
+    [finishQuiz, showQuestion],
+  );
+
+  /** Shows the first question as soon as half the quiz is written; the rest arrives while it's answered. */
   const startQuiz = useCallback(
-    async (lesson: string | null = null) => {
+    async ({ topic = null, request, silent = false }: StartQuizOptions = {}) => {
       if (quizRef.current || preparingQuizRef.current) {
-        toast.info('Finish the current quiz first.');
+        if (!silent) toast.info('Finish the current quiz first.');
         return;
       }
       const session = sessionRef.current;
       const placeholderId = createId();
+      const { first, rest } = request ?? generateQuiz(topic);
       preparingQuizRef.current = true;
       setIsPreparingQuiz(true);
       setMessages((prev) => [...prev, { id: placeholderId, role: 'coach', text: '', status: 'streaming' }]);
 
       try {
-        const questions = await generateQuiz(lesson);
+        let questions: QuizQuestion[];
+        let pending: Promise<QuizQuestion[]> | null = rest;
+        try {
+          questions = await first;
+        } catch {
+          // The other half can still carry the quiz on its own.
+          pending = null;
+          questions = await rest;
+        }
         if (session !== sessionRef.current) return;
-        const run: QuizRun = { questions, index: 0, correct: 0, missedTopics: [] };
+
+        const run: QuizRun = { questions, index: 0, correct: 0, missedTopics: [], total: QUIZ_LENGTH, rest: null };
+        if (pending) {
+          run.rest = pending
+            .then((more) => {
+              run.questions = [...run.questions, ...more];
+            })
+            .catch(() => undefined)
+            .finally(() => {
+              run.total = run.questions.length;
+              run.rest = null;
+              if (quizRef.current === run) {
+                setQuizProgress((current) => (current ? { ...current, total: run.total } : current));
+              }
+            });
+        } else {
+          run.total = questions.length;
+        }
         quizRef.current = run;
         setMessages((prev) => prev.filter((message) => message.id !== placeholderId));
         showQuestion(run);
       } catch (error) {
         if (session !== sessionRef.current) return;
         setMessages((prev) => prev.filter((message) => message.id !== placeholderId));
-        toast.error(error instanceof Error ? error.message : getCoachErrorMessage(error), {
-          action: { label: 'Retry', onPress: () => void startQuizRef.current(lesson) },
-        });
+        if (!silent) {
+          toast.error(error instanceof Error ? error.message : getCoachErrorMessage(error), {
+            action: { label: 'Retry', onPress: () => void startQuizRef.current({ topic }) },
+          });
+        }
       } finally {
         if (session === sessionRef.current) {
           preparingQuizRef.current = false;
@@ -253,15 +333,14 @@ export function useSmartCoach() {
     },
     [showQuestion],
   );
-  const startQuizRef = useRef(startQuiz);
 
   const answerQuiz = useCallback(
     (messageId: string, option: number) => {
       const run = quizRef.current;
       if (!run) return;
       const question = run.questions[run.index];
+      if (!question) return;
       const correct = option === question.correctIndex;
-      const answeredIndex = run.index;
 
       if (correct) run.correct += 1;
       else run.missedTopics.push(question.topic);
@@ -278,16 +357,17 @@ export function useSmartCoach() {
       const session = sessionRef.current;
       setTimeout(() => {
         if (session !== sessionRef.current || quizRef.current !== run) return;
-        if (run.index < run.questions.length) showQuestion(run);
-        else finishQuiz(run, answeredIndex + 1);
+        void advance(run);
       }, NEXT_QUESTION_DELAY_MS);
     },
-    [finishQuiz, showQuestion],
+    [advance],
   );
 
   const endQuiz = useCallback(() => {
     const run = quizRef.current;
     if (!run) return;
+    // The second half may still be in flight; ending now means it's simply ignored.
+    run.rest = null;
     setMessages((prev) =>
       prev.map((message) =>
         message.quiz && message.quiz.answer === null && !message.quiz.skipped
@@ -298,19 +378,31 @@ export function useSmartCoach() {
     finishQuiz(run, run.index);
   }, [finishQuiz]);
 
-  /** Opens a session on Smart Coach's own initiative: a short lesson picked from habits, then a quiz on it. */
-  const startSession = useCallback(async () => {
+  /**
+   * Opens a session on Smart Coach's own initiative: a short lesson picked from habits, then a quiz
+   * on it. The quiz starts being written as soon as the lesson's topic streams in, so it's usually
+   * ready by the time the lesson has been read.
+   */
+  const startSession = useCallback(async ({ silent = false }: { silent?: boolean } = {}) => {
     if (respondingRef.current || quizRef.current || preparingQuizRef.current) return;
     const session = sessionRef.current;
-    const reply = await sendRef.current(LESSON_PROMPT, { hidden: true, lesson: true });
+    let request: QuizRequest | undefined;
+    const reply = await sendRef.current(LESSON_PROMPT, {
+      hidden: true,
+      lesson: true,
+      silent,
+      onTopic: (topic) => {
+        request = generateQuiz(topic);
+      },
+    });
     if (!reply || session !== sessionRef.current) return;
 
-    const { topic, text } = parseLesson(reply);
+    const { topic } = parseLesson(reply);
     if (topic) {
       lessonTopicRef.current = topic;
       recordHabit('lesson', topic);
     }
-    await startQuizRef.current(text || reply);
+    await startQuizRef.current({ topic, request, silent });
   }, []);
 
   useEffect(() => {

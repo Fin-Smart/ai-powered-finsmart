@@ -41,11 +41,12 @@ export function AIScreen() {
   const [composerHeight, setComposerHeight] = useState(0);
   const [historyVisible, setHistoryVisible] = useState(false);
 
-  // The tab mounts the first time it's opened; Smart Coach starts that session on its own, once per launch.
+  // The tab is mounted in the background shortly after launch, so this session is usually ready
+  // before it's opened. It fails quietly; "Today's lesson" starts one again with full error messages.
   useEffect(() => {
     if (autoSessionStarted) return;
     autoSessionStarted = true;
-    void startSession();
+    void startSession({ silent: true });
   }, [startSession]);
 
   const visibleMessages = useMemo(() => messages.filter((message) => !message.hidden), [messages]);
