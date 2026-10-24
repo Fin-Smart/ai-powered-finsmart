@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ActivityIndicator, Image, Pressable, Text, View } from 'react-native';
+import { Image, Text, View } from 'react-native';
 
 import appConfig from '../../app.json';
 import { useBudgets } from '../budget/BudgetsProvider';
@@ -19,6 +19,7 @@ import {
   LogoutIcon,
   MailIcon,
   MailVerifyIcon,
+  PlusIcon,
   ProfileIcon,
 } from '../components/icons';
 import { Screen } from '../components/Screen';
@@ -41,7 +42,7 @@ type BusyAction = 'password' | 'verify' | 'signOut' | 'delete' | null;
 
 export function ProfileScreen() {
   const { theme, preference, setPreference } = useTheme();
-  const { colors, spacing, typography, radius } = theme;
+  const { colors, spacing, typography } = theme;
   const user = useAuthUser();
   const { summaries, isLoading } = useBudgets();
   const currency = usePreferredCurrency();
@@ -206,59 +207,25 @@ export function ProfileScreen() {
         </View>
       </View>
 
-      <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.xl, marginBottom: spacing.sm + 2 }}>
-        <Text
-          accessibilityRole="header"
-          style={{ flex: 1, color: colors.text, fontFamily: typography.fontFamily.semiBold, fontSize: typography.fontSize.lg }}>
-          Budgets
-        </Text>
-        {summaries.length > 0 ? (
-          <Text
-            accessibilityRole="button"
-            onPress={() => setSheet({ mode: 'create' })}
-            suppressHighlighting
-            style={{ color: colors.primary, fontFamily: typography.fontFamily.semiBold, fontSize: typography.fontSize.sm }}>
-            + New budget
-          </Text>
-        ) : null}
-      </View>
-
-      {isLoading ? (
-        <ActivityIndicator color={colors.textMuted} style={{ paddingVertical: spacing.lg }} />
-      ) : summaries.length === 0 ? (
-        <View style={{ gap: spacing.sm + 2, padding: spacing.lg, borderRadius: radius.xl, backgroundColor: colors.surface }}>
-          <Text style={{ color: colors.text, fontFamily: typography.fontFamily.semiBold, fontSize: typography.fontSize.md }}>
-            Create your first budget
-          </Text>
-          <Text style={{ color: colors.textSecondary, fontFamily: typography.fontFamily.regular, fontSize: typography.fontSize.sm, lineHeight: 20 }}>
-            Set how much you have, split it into categories, and track what you spend. Smart Coach can plan it with you.
-          </Text>
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => setSheet({ mode: 'create' })}
-            style={({ pressed }) => ({
-              alignSelf: 'flex-start',
-              marginTop: spacing.xs,
-              paddingVertical: spacing.sm + 2,
-              paddingHorizontal: spacing.md + 4,
-              borderRadius: 999,
-              backgroundColor: colors.primary,
-              opacity: pressed ? 0.8 : 1,
-            })}>
-            <Text style={{ color: colors.onPrimary, fontFamily: typography.fontFamily.semiBold, fontSize: typography.fontSize.sm }}>
-              Create budget
-            </Text>
-          </Pressable>
-        </View>
-      ) : (
-        <View style={{ gap: spacing.sm + 2 }}>
+      <View style={{ gap: spacing.lg, marginTop: spacing.xl }}>
+        <SettingsGroup
+          title="Budgets"
+          footer={
+            !isLoading && summaries.length === 0
+              ? 'Split your money into categories and track what you spend. Smart Coach can plan it with you.'
+              : undefined
+          }>
           {summaries.map((summary) => (
             <BudgetCard key={summary.budget.id} summary={summary} onPress={() => setSheet({ mode: 'view', budgetId: summary.budget.id })} />
           ))}
-        </View>
-      )}
+          <SettingsRow
+            Icon={PlusIcon}
+            label={summaries.length === 0 ? 'Create a budget' : 'New budget'}
+            busy={isLoading}
+            onPress={() => setSheet({ mode: 'create' })}
+          />
+        </SettingsGroup>
 
-      <View style={{ gap: spacing.lg, marginTop: spacing.xl }}>
         <SettingsGroup title="Account">
           <SettingsRow
             Icon={usesGoogle ? GoogleLogoIcon : MailIcon}

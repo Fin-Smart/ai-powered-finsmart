@@ -25,6 +25,8 @@ import Logout01Icon from '@hugeicons/core-free-icons/Logout01Icon';
 import MailValidation01Icon from '@hugeicons/core-free-icons/MailValidation01Icon';
 import Money03Icon from '@hugeicons/core-free-icons/Money03Icon';
 import Moon02Icon from '@hugeicons/core-free-icons/Moon02Icon';
+import PlusSignIcon from '@hugeicons/core-free-icons/PlusSignIcon';
+import Wallet01Icon from '@hugeicons/core-free-icons/Wallet01Icon';
 import { HugeiconsIcon, type IconSvgElement } from '@hugeicons/react-native';
 
 export type IconProps = {
@@ -78,3 +80,5 @@ export const LogoutIcon = createIcon(Logout01Icon);
 export const MailVerifyIcon = createIcon(MailValidation01Icon);
 export const CurrencyIcon = createIcon(Money03Icon);
 export const AppearanceIcon = createIcon(Moon02Icon);
+export const PlusIcon = createIcon(PlusSignIcon);
+export const WalletIcon = createIcon(Wallet01Icon);
