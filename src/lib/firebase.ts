@@ -10,6 +10,7 @@ export const app = getApp();
 /**
  * Release builds attest with App Attest (iOS) and Play Integrity (Android). Development builds use
  * the debug provider; register its token per app in Firebase console > App Check > Manage debug tokens.
+ * Sideloaded Android APKs can't pass Play Integrity, so any Android build given a debug token uses it.
  * Must be initialized before AI Logic, Firestore or Storage send requests.
  */
 const debugToken = process.env.EXPO_PUBLIC_FIREBASE_APPCHECK_DEBUG_TOKEN || undefined;
@@ -17,7 +18,7 @@ const debugToken = process.env.EXPO_PUBLIC_FIREBASE_APPCHECK_DEBUG_TOKEN || unde
 export const appCheck = initializeAppCheck(app, {
   provider: {
     providerOptions: {
-      android: { provider: __DEV__ ? 'debug' : 'playIntegrity', debugToken },
+      android: { provider: __DEV__ || debugToken ? 'debug' : 'playIntegrity', debugToken },
       apple: { provider: __DEV__ ? 'debug' : 'appAttestWithDeviceCheckFallback', debugToken },
     },
   },
