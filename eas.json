@@ -28,9 +28,21 @@
       "autoIncrement": true,
       "environment": "production",
       "channel": "production"
+    },
+    "playstore": {
+      "extends": "production",
+      "android": {
+        "buildType": "app-bundle"
+      }
     }
   },
   "submit": {
-    "production": {}
+    "production": {},
+    "playstore": {
+      "android": {
+        "track": "internal",
+        "releaseStatus": "draft"
+      }
+    }
   }
 }
