@@ -5,7 +5,10 @@
   },
   "build": {
     "base": {
-      "node": "24.12.0"
+      "node": "24.12.0",
+      "android": {
+        "buildType": "apk"
+      }
     },
     "development": {
       "extends": "base",
